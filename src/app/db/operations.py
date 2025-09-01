@@ -36,7 +36,7 @@ async def query_problem(session: AsyncSession, problem_id: uuid.UUID) -> Problem
     problem_db = (
         await session.exec(select(DBProblem).where(DBProblem.id == problem_id))
     ).one_or_none()
-    return Problem.model_validate(problem_db)
+    return await dbproblem2pydproblem(problem_db) if problem_db is not None else None
 
 
 async def search_problem(
