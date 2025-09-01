@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Query
 
 from app.api.deps import DbSessionDep
@@ -8,5 +10,7 @@ router = APIRouter(tags=["sheet"])
 
 
 @router.get("/random")
-async def random(session: DbSessionDep, n: int = Query(20)) -> list[Problem]:
-    return await sample(session, n)
+async def random(
+    session: DbSessionDep, problemset_id: uuid.UUID = Query(), n: int = Query(20)
+) -> list[Problem]:
+    return await sample(session, problemset_id, n)

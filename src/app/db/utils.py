@@ -14,3 +14,6 @@ async def dbproblem2pydproblem(p: DBProblem) -> Problem:
         options=[dboption2pydoption(o) for o in await p.awaitable_attrs.options],
         type=p.type,
     )
+
+
+# 因为 async sqlmodel 的关系属性是懒加载的所以需要这么一下

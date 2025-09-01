@@ -17,3 +17,9 @@ class Problem(BaseModel):
     content: str
     options: list[Option]
     type: ProblemType
+
+
+class ProblemSet(BaseModel):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    name: str
+    count: int

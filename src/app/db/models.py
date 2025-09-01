@@ -30,14 +30,15 @@ class OptionAsyncAttrs:
 class DBOption(SQLModel, AsyncAttrs[OptionAsyncAttrs], table=True):
     __tablename__ = "option"  # type: ignore
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    order: int
+    content: str
+    is_correct: bool
+
     problem_id: uuid.UUID = Field(
         foreign_key="problem.id",
         # sa_column_kwargs={"ondelete": "CASCADE"},
     )
     problem: "DBProblem" = Relationship(back_populates="options")
-    order: int
-    content: str
-    is_correct: bool
 
 
 class ProblemAsyncAttrs:
@@ -51,14 +52,34 @@ class DBProblem(SQLModel, AsyncAttrs[ProblemAsyncAttrs], table=True):
     __tablename__ = "problem"  # type: ignore
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     content: str
+    type: ProblemType
+
+    problemset_id: uuid.UUID = Field(foreign_key="problemset.id")
+    problemset: "DBProblemSet" = Relationship(back_populates="problems")
     options: list[DBOption] = Relationship(
         back_populates="problem",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-    type: ProblemType
+
+
+class ProblemSetAsyncAttrs:
+    id: Awaitable[uuid.UUID]
+    name: Awaitable[str]
+    problems: Awaitable[list[DBProblem]]
+
+
+class DBProblemSet(SQLModel, AsyncAttrs[ProblemSetAsyncAttrs], table=True):
+    __tablename__ = "problemset"  # type: ignore
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str
+
+    problems: list[DBProblem] = Relationship(
+        back_populates="problemset",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
 
 
 TABLES = [
     SQLModel.metadata.tables[t.__tablename__]  # type: ignore
-    for t in (DBOption, DBProblem)
+    for t in (DBOption, DBProblem, DBProblemSet)
 ]

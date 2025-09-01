@@ -9,8 +9,11 @@ from sqlmodel import select
 from app.db.core import AsyncDatabaseCore
 from app.db.models import TABLES, DBProblem
 from app.db.operations import (
+    ProblemSetCreateStatus,
     add_problems,
+    create_problemset,
     delete_problems,
+    delete_problemset,
     get_problem_count,
     query_problem,
     sample,
@@ -39,17 +42,20 @@ async def db() -> AsyncGenerator[AsyncDatabaseCore, None]:
 
 
 @pytest.fixture(scope="function")
-async def clear_db(db: AsyncDatabaseCore) -> AsyncGenerator[None, None]:
+async def prepare_db(db: AsyncDatabaseCore) -> AsyncGenerator[uuid.UUID, None]:
     async with db.get_session() as session:
         await delete_problems(session)
         await session.commit()
-    yield
+        id_, _ = await create_problemset(session, "test")
+        await session.commit()
+    yield id_
 
 
-async def test_add(db: AsyncDatabaseCore, clear_db: None) -> None:
+async def test_add(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
     async with db.get_session() as session:
         await add_problems(
             session,
+            prepare_db,
             Problem(
                 content="114514 + 1919810 = ?",
                 type=ProblemType.single_select,
@@ -74,7 +80,7 @@ async def test_add(db: AsyncDatabaseCore, clear_db: None) -> None:
         print(problem)
 
 
-async def test_multiadd(db: AsyncDatabaseCore, clear_db: None) -> None:
+async def test_multiadd(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
     with open("data/example_data.csv", "r", encoding="utf-8", errors="replace") as fp:
         sheet = fp.readlines()
     problems: list[Problem] = []
@@ -103,29 +109,30 @@ async def test_multiadd(db: AsyncDatabaseCore, clear_db: None) -> None:
             )
         )
     async with db.get_session() as session:
-        await add_problems(session, *problems)
+        await add_problems(session, prepare_db, *problems)
         await session.commit()
         assert (await get_problem_count(session)) == 1006
 
 
-async def test_query_problem(db: AsyncDatabaseCore, clear_db: None) -> None:
+async def test_query_problem(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
     """测试查询单个问题功能"""
     async with db.get_session() as session:
         # 先添加一个问题
-        problem_id = (
-            await add_problems(
-                session,
-                Problem(
-                    content="测试查询问题",
-                    type=ProblemType.single_select,
-                    options=[
-                        Option(is_correct=True, order=0, content="正确答案"),
-                        Option(is_correct=False, order=1, content="错误答案1"),
-                        Option(is_correct=False, order=2, content="错误答案2"),
-                    ],
-                ),
-            )
-        )[0]
+        problem_ids = await add_problems(
+            session,
+            prepare_db,
+            Problem(
+                content="测试查询问题",
+                type=ProblemType.single_select,
+                options=[
+                    Option(is_correct=True, order=0, content="正确答案"),
+                    Option(is_correct=False, order=1, content="错误答案1"),
+                    Option(is_correct=False, order=2, content="错误答案2"),
+                ],
+            ),
+        )
+        assert problem_ids is not None
+        problem_id = problem_ids[0]
         await session.commit()
 
     async with db.get_session() as session:
@@ -145,12 +152,13 @@ async def test_query_problem(db: AsyncDatabaseCore, clear_db: None) -> None:
         assert non_existent_problem is None
 
 
-async def test_search_problem(db: AsyncDatabaseCore, clear_db: None) -> None:
+async def test_search_problem(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
     """测试搜索问题功能"""
     async with db.get_session() as session:
         # 添加几个测试问题
         await add_problems(
             session,
+            prepare_db,
             Problem(
                 content="Python是一种编程语言",
                 type=ProblemType.single_select,
@@ -197,12 +205,13 @@ async def test_search_problem(db: AsyncDatabaseCore, clear_db: None) -> None:
         assert results_page1 + results_page2 == results
 
 
-async def test_delete_problems(db: AsyncDatabaseCore, clear_db: None) -> None:
+async def test_delete_problems(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
     """测试删除问题功能"""
     async with db.get_session() as session:
         # 添加几个问题
         problem_ids = await add_problems(
             session,
+            prepare_db,
             Problem(
                 content="问题1",
                 type=ProblemType.single_select,
@@ -219,6 +228,7 @@ async def test_delete_problems(db: AsyncDatabaseCore, clear_db: None) -> None:
                 options=[Option(is_correct=True, order=0, content="答案3")],
             ),
         )
+        assert problem_ids is not None
         await session.commit()
         assert await get_problem_count(session) == 3
 
@@ -244,7 +254,7 @@ async def test_delete_problems(db: AsyncDatabaseCore, clear_db: None) -> None:
         assert await get_problem_count(session) == 0
 
 
-async def test_sample_problems(db: AsyncDatabaseCore, clear_db: None) -> None:
+async def test_sample_problems(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
     """测试随机抽样功能"""
     async with db.get_session() as session:
         # 添加多个问题
@@ -258,13 +268,13 @@ async def test_sample_problems(db: AsyncDatabaseCore, clear_db: None) -> None:
                 )
             )
 
-        await add_problems(session, *problems)
+        await add_problems(session, prepare_db, *problems)
         await session.commit()
         assert await get_problem_count(session) == 50
 
     async with db.get_session() as session:
         # 抽样10个问题
-        sampled_problems = await sample(session, 10)
+        sampled_problems = await sample(session, prepare_db, 10)
         assert len(sampled_problems) == 10
 
         # 验证抽样结果都是有效的问题
@@ -274,29 +284,32 @@ async def test_sample_problems(db: AsyncDatabaseCore, clear_db: None) -> None:
             assert problem.options[0].is_correct is True
 
         # 测试抽样数量超过总数
-        all_problems = await sample(session, 100)
+        all_problems = await sample(session, prepare_db, 100)
         assert len(all_problems) == 50  # 应该返回所有问题
 
 
-async def test_multi_select_problem(db: AsyncDatabaseCore, clear_db: None) -> None:
+async def test_multi_select_problem(
+    db: AsyncDatabaseCore, prepare_db: uuid.UUID
+) -> None:
     """测试多选问题类型"""
     async with db.get_session() as session:
         # 添加一个多选题
-        problem_id = (
-            await add_problems(
-                session,
-                Problem(
-                    content="以下哪些是编程语言？",
-                    type=ProblemType.multi_select,
-                    options=[
-                        Option(is_correct=True, order=0, content="Python"),
-                        Option(is_correct=True, order=1, content="Java"),
-                        Option(is_correct=False, order=2, content="HTML"),
-                        Option(is_correct=True, order=3, content="C++"),
-                    ],
-                ),
-            )
-        )[0]
+        problem_ids = await add_problems(
+            session,
+            prepare_db,
+            Problem(
+                content="以下哪些是编程语言？",
+                type=ProblemType.multi_select,
+                options=[
+                    Option(is_correct=True, order=0, content="Python"),
+                    Option(is_correct=True, order=1, content="Java"),
+                    Option(is_correct=False, order=2, content="HTML"),
+                    Option(is_correct=True, order=3, content="C++"),
+                ],
+            ),
+        )
+        assert problem_ids is not None
+        problem_id = problem_ids[0]
         await session.commit()
 
     async with db.get_session() as session:
@@ -313,12 +326,13 @@ async def test_multi_select_problem(db: AsyncDatabaseCore, clear_db: None) -> No
         assert correct_contents == {"Python", "Java", "C++"}
 
 
-async def test_search_edge_cases(db: AsyncDatabaseCore, clear_db: None) -> None:
+async def test_search_edge_cases(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
     """测试搜索边界情况"""
     async with db.get_session() as session:
         # 添加测试数据
         await add_problems(
             session,
+            prepare_db,
             Problem(
                 content="测试空字符串搜索test",
                 type=ProblemType.single_select,
@@ -345,7 +359,7 @@ async def test_search_edge_cases(db: AsyncDatabaseCore, clear_db: None) -> None:
         assert len(case_insensitive_results) == 1  # 应该能找到"测试"
 
 
-async def test_problem_count(db: AsyncDatabaseCore, clear_db: None) -> None:
+async def test_problem_count(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
     """测试问题计数功能"""
     async with db.get_session() as session:
         # 初始计数应为0
@@ -354,6 +368,7 @@ async def test_problem_count(db: AsyncDatabaseCore, clear_db: None) -> None:
         # 添加一个问题
         await add_problems(
             session,
+            prepare_db,
             Problem(
                 content="计数测试问题",
                 type=ProblemType.single_select,
@@ -366,6 +381,7 @@ async def test_problem_count(db: AsyncDatabaseCore, clear_db: None) -> None:
         # 再添加一个问题
         await add_problems(
             session,
+            prepare_db,
             Problem(
                 content="另一个计数测试问题",
                 type=ProblemType.single_select,
@@ -379,3 +395,19 @@ async def test_problem_count(db: AsyncDatabaseCore, clear_db: None) -> None:
         await delete_problems(session)
         await session.commit()
         assert await get_problem_count(session) == 0
+
+
+async def test_problemset(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
+    async with db.get_session() as session:
+        id_, status = await create_problemset(session, "test")
+        assert id_ == prepare_db
+        assert status == ProblemSetCreateStatus.already_exists
+        await session.commit()
+
+        id_, status = await create_problemset(session, "test2")
+        assert id_ != prepare_db
+        assert status == ProblemSetCreateStatus.success
+        await session.commit()
+
+        id__ = await delete_problemset(session, id_)
+        assert id__ is not None
