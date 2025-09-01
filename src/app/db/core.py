@@ -10,8 +10,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.typ import AsyncCallable
 
-from .models import TABLES
-
 P = ParamSpec("P")
 T = TypeVar("T")
 
@@ -81,8 +79,3 @@ class AsyncDatabaseCore:
     ) -> AsyncGenerator[AsyncSession, None]:
         async with self.get_session(autoflush) as session:
             yield session
-
-
-class AppDatabase(AsyncDatabaseCore):
-    def __init__(self, dburl: str, *, echo: bool = False):
-        super().__init__(dburl, TABLES, echo=echo)

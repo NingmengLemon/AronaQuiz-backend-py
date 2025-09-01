@@ -7,7 +7,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 T = TypeVar("T")
 
-__all__ = ["Option", "Problem", "ProblemType"]
+__all__ = ["DBOption", "DBProblem", "ProblemType"]
 
 
 class AsyncAttrs(_AsyncAttrs, Generic[T]):
@@ -22,15 +22,19 @@ class ProblemType(StrEnum):
 
 class OptionAsyncAttrs:
     id: Awaitable[uuid.UUID]
-    # problem: Awaitable["Problem"]
+    problem: Awaitable["DBProblem"]
     order: Awaitable[int]
     content: Awaitable[str]
 
 
-class Option(SQLModel, AsyncAttrs[OptionAsyncAttrs], table=True):
+class DBOption(SQLModel, AsyncAttrs[OptionAsyncAttrs], table=True):
+    __tablename__ = "option"  # type: ignore
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    problem_id: uuid.UUID = Field(foreign_key="problem.id")
-    # problem: "Problem" = Relationship(back_populates="options")
+    problem_id: uuid.UUID = Field(
+        foreign_key="problem.id",
+        # sa_column_kwargs={"ondelete": "CASCADE"},
+    )
+    problem: "DBProblem" = Relationship(back_populates="options")
     order: int
     content: str
     is_correct: bool
@@ -39,15 +43,15 @@ class Option(SQLModel, AsyncAttrs[OptionAsyncAttrs], table=True):
 class ProblemAsyncAttrs:
     id: Awaitable[uuid.UUID]
     content: Awaitable[str]
-    options: Awaitable[list[Option]]
-    answers: Awaitable[str]
+    options: Awaitable[list[DBOption]]
     type: Awaitable[ProblemType]
 
 
-class Problem(SQLModel, AsyncAttrs[ProblemAsyncAttrs], table=True):
+class DBProblem(SQLModel, AsyncAttrs[ProblemAsyncAttrs], table=True):
+    __tablename__ = "problem"  # type: ignore
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     content: str
-    options: list[Option] = Relationship(
+    options: list[DBOption] = Relationship(
         back_populates="problem",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
@@ -56,5 +60,5 @@ class Problem(SQLModel, AsyncAttrs[ProblemAsyncAttrs], table=True):
 
 TABLES = [
     SQLModel.metadata.tables[t.__tablename__]  # type: ignore
-    for t in (Option, Problem)
+    for t in (DBOption, DBProblem)
 ]

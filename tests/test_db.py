@@ -5,11 +5,10 @@ import dotenv
 import pytest
 from sqlmodel import delete, select
 
-from app.db.core import AppDatabase
-from app.db.models import Problem as DBProblem
+from app.db.core import AsyncDatabaseCore
+from app.db.models import TABLES, DBProblem
 from app.db.operations import (
     add_problems,
-    delete_all_problems,
     delete_problems,
     get_problem_count,
     query_problem,
@@ -23,7 +22,7 @@ DB_NAME = "hdusp2_test"
 
 
 @pytest.fixture(scope="module")
-async def db() -> AsyncGenerator[AppDatabase, None]:
+async def db() -> AsyncGenerator[AsyncDatabaseCore, None]:
     # username = os.getenv("DB_USER")
     # password = os.getenv("DB_PASSWORD")
     # host = os.getenv("DB_HOST")
@@ -32,20 +31,20 @@ async def db() -> AsyncGenerator[AppDatabase, None]:
     if os.path.exists(f := f"data/{DB_NAME}.db"):
         os.remove(f)
     DATABASE_URL = f"sqlite+aiosqlite:///data/{DB_NAME}.db"
-    db = AppDatabase(DATABASE_URL, echo=True)
+    db = AsyncDatabaseCore(DATABASE_URL, TABLES, echo=True)
     await db.startup()
     yield db
 
 
 @pytest.fixture(scope="function")
-async def clear_db(db: AppDatabase) -> AsyncGenerator[None, None]:
+async def clear_db(db: AsyncDatabaseCore) -> AsyncGenerator[None, None]:
     async with db.get_session() as session:
-        await delete_all_problems(session)
+        await delete_problems(session)
         await session.commit()
     yield
 
 
-async def test_add(db: AppDatabase) -> None:
+async def test_add(db: AsyncDatabaseCore, clear_db: None) -> None:
     async with db.get_session() as session:
         await add_problems(
             session,
@@ -73,7 +72,7 @@ async def test_add(db: AppDatabase) -> None:
         print(problem)
 
 
-async def test_multiadd(db: AppDatabase, clear_db: None) -> None:
+async def test_multiadd(db: AsyncDatabaseCore, clear_db: None) -> None:
     with open("data/example_data.csv", "r", encoding="utf-8", errors="replace") as fp:
         sheet = fp.readlines()
     problems: list[Problem] = []
@@ -88,7 +87,7 @@ async def test_multiadd(db: AppDatabase, clear_db: None) -> None:
                 content=content,
                 type=(
                     ProblemType.multi_select
-                    if type_ == "单选题"
+                    if type_ == "多选题"
                     else ProblemType.single_select
                 ),
                 options=[
@@ -97,7 +96,7 @@ async def test_multiadd(db: AppDatabase, clear_db: None) -> None:
                         order=ord(order) - ord("A"),
                         is_correct=order in answ,
                     )
-                    for order, opcontent in zip("ABCD", [a, b, c, d])
+                    for order, opcontent in zip("ABCD", filter(None, [a, b, c, d]))
                 ],
             )
         )

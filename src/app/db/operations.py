@@ -1,12 +1,14 @@
+import logging
 import uuid
 
-from sqlalchemy import delete
-from sqlmodel import col, func, or_, select
+from sqlmodel import col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..schemas.sheet import Problem
-from .models import Option as DBOption
-from .models import Problem as DBProblem
+from .models import DBOption, DBProblem
+from .utils import dbproblem2pydproblem
+
+logger = logging.getLogger("uvicorn.error")
 
 
 async def add_problems(session: AsyncSession, *problems: Problem) -> list[uuid.UUID]:
@@ -46,28 +48,41 @@ async def search_problem(
     if not kw:
         return []
 
-    stmt = select(DBProblem).filter(
-        or_(
-            col(DBProblem.content).icontains(kw),
-            col(DBOption.content).icontains(kw),
+    stmt = (
+        select(DBProblem)
+        .outerjoin(DBOption)
+        .filter(
+            or_(
+                col(DBProblem.content).icontains(kw),
+                col(DBOption.content).icontains(kw),
+            )
         )
-    )
+    ).distinct()
     page = max(1, page)
-    page_size = max(0, page)
+    page_size = max(0, page_size)
     if page_size != 0:
-        stmt = stmt.offset(page_size * page - 1).limit(page_size)
-    problems = [Problem.model_validate(p) for p in (await session.exec(stmt)).all()]
+        stmt = stmt.offset(page_size * (page - 1)).limit(page_size)
+    db_problems = (await session.exec(stmt)).all()
+    problems = [(await dbproblem2pydproblem(p)) for p in db_problems]
 
     return problems
 
 
 async def delete_problems(session: AsyncSession, *problem_ids: uuid.UUID) -> None:
-    await session.delete(select(DBProblem).where(col(DBProblem.id).in_(problem_ids)))
-
-
-async def delete_all_problems(session: AsyncSession) -> None:
-    await session.exec(delete(DBProblem))  # type: ignore
+    stmt = delete(DBProblem)
+    if problem_ids:
+        stmt = stmt.where(col(DBProblem.id).in_(problem_ids))
+    await session.exec(stmt)  # type: ignore
+    stmt = delete(DBOption)
+    if problem_ids:
+        stmt = stmt.where(col(DBOption.problem_id).in_(problem_ids))
+    await session.exec(stmt)  # type: ignore
 
 
 async def get_problem_count(session: AsyncSession) -> int:
     return (await session.exec(select(func.count()).select_from(DBProblem))).one()
+
+
+async def sample(session: AsyncSession, n: int = 20) -> list[Problem]:
+    db_problems = await session.exec(select(DBProblem).order_by(func.random()).limit(n))
+    return [(await dbproblem2pydproblem(p)) for p in db_problems]
