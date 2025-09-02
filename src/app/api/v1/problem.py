@@ -2,6 +2,7 @@ import logging
 import uuid
 from typing import Literal
 
+import uvicorn
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel
 
@@ -12,9 +13,11 @@ from app.db.operations import (
     create_problemset,
     delete_problems,
     get_problem_count,
+    list_problemset,
     search_problem,
 )
-from app.schemas.sheet import Problem
+from app.schemas.sheet import BaseProblem as ProblemSubmit
+from app.schemas.sheet import Problem, ProblemSet
 
 router = APIRouter(tags=["problem"])
 logger = logging.getLogger("uvicorn.error")
@@ -31,13 +34,22 @@ async def create_set(session: DbSessionDep, name: str) -> CreateSetResp:
     return CreateSetResp(id=id_, status=status)
 
 
+@router.get("/list_set")
+async def list_set(session: DbSessionDep) -> list[ProblemSet]:
+    return await list_problemset(session)
+
+
 @router.post("/add")
 async def add(
     session: DbSessionDep,
-    problems: list[Problem] = Body(),
+    problems: list[ProblemSubmit] = Body(),
     problemset_id: uuid.UUID = Body(),
 ) -> list[uuid.UUID]:
-    result = await add_problems(session, problemset_id, *problems)
+    result = await add_problems(
+        session,
+        problemset_id,
+        *[Problem.model_validate(p) for p in problems],
+    )
     if result is None:
         raise HTTPException(404, f"problem set {problemset_id} not found")
     return result

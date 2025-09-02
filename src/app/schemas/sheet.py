@@ -12,11 +12,14 @@ class Option(BaseModel):
     is_correct: bool
 
 
-class Problem(BaseModel):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+class BaseProblem(BaseModel):
     content: str
     options: list[Option]
     type: ProblemType
+
+
+class Problem(BaseProblem):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
 
 
 class ProblemSet(BaseModel):

@@ -79,6 +79,20 @@ class DBProblemSet(SQLModel, AsyncAttrs[ProblemSetAsyncAttrs], table=True):
     )
 
 
+class DBUser(SQLModel, AsyncAttrs, table=True):
+    __tablename__ = "user"  # type: ignore
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    username: str
+    password_hash: str
+    password_salt: str
+    nickname: str
+
+
+class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
+    __tablename__ = "answerrecord"  # type: ignore
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+
 TABLES = [
     SQLModel.metadata.tables[t.__tablename__]  # type: ignore
     for t in (DBOption, DBProblem, DBProblemSet)
