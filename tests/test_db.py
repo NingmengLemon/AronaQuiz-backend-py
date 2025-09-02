@@ -4,10 +4,10 @@ from typing import AsyncGenerator
 
 import dotenv
 import pytest
-from sqlmodel import select
+from sqlmodel import delete, select
 
 from app.db.core import AsyncDatabaseCore
-from app.db.models import TABLES, DBProblem
+from app.db.models import TABLES, DBAnswerRecord, DBProblem, DBUser
 from app.db.operations import (
     ProblemSetCreateStatus,
     add_problems,
@@ -37,7 +37,11 @@ async def db() -> AsyncGenerator[AsyncDatabaseCore, None]:
     if os.path.exists(f := f"data/{DB_NAME}.db"):
         os.remove(f)
     DATABASE_URL = f"sqlite+aiosqlite:///data/{DB_NAME}.db"
-    db = AsyncDatabaseCore(DATABASE_URL, TABLES, echo=True)
+    db = AsyncDatabaseCore(
+        DATABASE_URL,
+        TABLES,
+        # echo=True,
+    )
     await db.startup()
     yield db
 
@@ -46,6 +50,8 @@ async def db() -> AsyncGenerator[AsyncDatabaseCore, None]:
 async def prepare_db(db: AsyncDatabaseCore) -> AsyncGenerator[uuid.UUID, None]:
     async with db.get_session() as session:
         await delete_all(session)
+        await session.exec(delete(DBUser))  # type: ignore
+        await session.exec(delete(DBAnswerRecord))  # type: ignore
         await session.commit()
         id_, _ = await create_problemset(session, "test")
         await session.commit()

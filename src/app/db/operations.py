@@ -110,30 +110,29 @@ async def search_problem(
         stmt = stmt.where(DBProblem.problemset_id == problemset_id)
     if kw:
         stmt = (
-            (
-                stmt.outerjoin(DBOption).filter(
-                    or_(
-                        col(DBProblem.content).icontains(kw),
-                        col(DBOption.content).icontains(kw),
-                    )
+            stmt.outerjoin(DBOption)
+            .filter(
+                or_(
+                    col(DBProblem.content).icontains(kw),
+                    col(DBOption.content).icontains(kw),
                 )
             )
             .distinct()
-            .outerjoin(
-                DBAnswerRecord,
-                and_(
-                    (DBAnswerRecord.problem_id == DBProblem.id),
-                    (
-                        DBAnswerRecord.user_id
-                        == (
-                            user_id
-                            if user_id is uuid.UUID
-                            else (await ensure_user(session, DEFAULT_USERNAME)).id
-                        )
-                    ),
-                ),
-            )
         )
+    stmt = stmt.outerjoin(
+        DBAnswerRecord,
+        and_(
+            (DBAnswerRecord.problem_id == DBProblem.id),
+            (
+                DBAnswerRecord.user_id
+                == (
+                    user_id
+                    if user_id is uuid.UUID
+                    else (await ensure_user(session, DEFAULT_USERNAME)).id
+                )
+            ),
+        ),
+    )
     page = max(1, page)
     page_size = max(0, page_size)
     if page_size != 0:
@@ -248,7 +247,6 @@ async def query_user(
 async def create_user(session: AsyncSession, username: str) -> DBUser:
     user = DBUser(username=username)
     session.add(user)
-
     return user
 
 
@@ -263,7 +261,6 @@ async def create_record(
 ) -> DBAnswerRecord:
     record = DBAnswerRecord(user_id=user_id, problem_id=problem_id)
     session.add(record)
-
     return record
 
 

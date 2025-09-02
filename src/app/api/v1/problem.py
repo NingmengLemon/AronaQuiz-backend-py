@@ -10,6 +10,7 @@ from app.db.operations import (
     ProblemSetCreateStatus,
     add_problems,
     create_problemset,
+    delete_all,
     delete_problems,
     get_problem_count,
     list_problemset,
@@ -109,8 +110,6 @@ async def delete(session: DbSessionDep, ids: list[uuid.UUID] = Body()) -> Litera
 @router.post("/delete_all")
 @in_session
 @in_transaction
-async def delete_all(
-    session: DbSessionDep, problemset_id: uuid.UUID = Body(None)
-) -> Literal["ok"]:
-    await delete_all(session, problemset_id=problemset_id)
+async def delete_all_problemsets(session: DbSessionDep) -> Literal["ok"]:
+    await delete_all(session)
     return "ok"
