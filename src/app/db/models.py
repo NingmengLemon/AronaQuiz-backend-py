@@ -1,3 +1,4 @@
+import datetime
 import uuid
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Awaitable, Generic, TypeVar
@@ -21,10 +22,7 @@ class ProblemType(StrEnum):
 
 
 class OptionAsyncAttrs:
-    id: Awaitable[uuid.UUID]
     problem: Awaitable["DBProblem"]
-    order: Awaitable[int]
-    content: Awaitable[str]
 
 
 class DBOption(SQLModel, AsyncAttrs[OptionAsyncAttrs], table=True):
@@ -42,10 +40,8 @@ class DBOption(SQLModel, AsyncAttrs[OptionAsyncAttrs], table=True):
 
 
 class ProblemAsyncAttrs:
-    id: Awaitable[uuid.UUID]
-    content: Awaitable[str]
     options: Awaitable[list[DBOption]]
-    type: Awaitable[ProblemType]
+    problemset: Awaitable["DBProblemSet"]
 
 
 class DBProblem(SQLModel, AsyncAttrs[ProblemAsyncAttrs], table=True):
@@ -63,8 +59,6 @@ class DBProblem(SQLModel, AsyncAttrs[ProblemAsyncAttrs], table=True):
 
 
 class ProblemSetAsyncAttrs:
-    id: Awaitable[uuid.UUID]
-    name: Awaitable[str]
     problems: Awaitable[list[DBProblem]]
 
 
@@ -79,21 +73,33 @@ class DBProblemSet(SQLModel, AsyncAttrs[ProblemSetAsyncAttrs], table=True):
     )
 
 
-# class DBUser(SQLModel, AsyncAttrs, table=True):
-#     __tablename__ = "user"  # type: ignore
-#     id: uuid.UUID = Field(default_factory=uuid.uuid4)
-#     username: str
-#     password_hash: str
-#     password_salt: str
-#     nickname: str
+class DBUser(SQLModel, AsyncAttrs, table=True):
+    __tablename__ = "user"  # type: ignore
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    username: str = Field(unique=True)
+    password_hash: str
+    password_salt: str
+    nickname: str
 
 
-# class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
-#     __tablename__ = "answerrecord"  # type: ignore
-#     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
+    __tablename__ = "answerrecord"  # type: ignore
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+    problem_id: uuid.UUID = Field(foreign_key="problem.id", index=True)
+
+    correct_count: int = Field(0, ge=0)
+    total_count: int = Field(0, ge=0)
+    last_attempt: datetime.datetime = Field(default_factory=datetime.datetime.now)
 
 
 TABLES = [
     SQLModel.metadata.tables[t.__tablename__]  # type: ignore
-    for t in (DBOption, DBProblem, DBProblemSet)
+    for t in (
+        DBOption,
+        DBProblem,
+        DBProblemSet,
+        DBUser,
+        DBAnswerRecord,
+    )
 ]

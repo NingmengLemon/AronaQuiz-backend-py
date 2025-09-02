@@ -19,7 +19,7 @@ from app.db.operations import (
     sample,
     search_problem,
 )
-from app.schemas.sheet import Option, Problem, ProblemType
+from app.schemas.problem import Option, Problem, ProblemType
 
 dotenv.load_dotenv()
 
@@ -342,10 +342,6 @@ async def test_search_edge_cases(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -
         await session.commit()
 
     async with db.get_session() as session:
-        # 测试空关键词搜索
-        empty_results = await search_problem(session, "")
-        assert empty_results == []
-
         # 测试不存在的关键词
         no_results = await search_problem(session, "不存在的关键词")
         assert no_results == []

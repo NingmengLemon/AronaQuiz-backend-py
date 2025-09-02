@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query
 
 from app.api.deps import DbSessionDep
 from app.db.operations import sample
-from app.schemas.sheet import Problem
+from app.schemas.problem import Problem
 
 router = APIRouter(tags=["sheet"])
 

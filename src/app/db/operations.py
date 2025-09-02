@@ -1,20 +1,26 @@
 import logging
 import uuid
 from enum import StrEnum, auto
+from typing import TypeVar, cast
 
+from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..schemas.sheet import Problem, ProblemSet
+from ..schemas.problem import Problem, ProblemSet
 from .models import DBOption, DBProblem, DBProblemSet
-from .utils import dbproblem2pydproblem
 
 logger = logging.getLogger("uvicorn.error")
+T = TypeVar("T")
 
 
 class ProblemSetCreateStatus(StrEnum):
     success = auto()
     already_exists = auto()
+
+
+def queryable(o: T) -> QueryableAttribute[T]:
+    return cast(QueryableAttribute, o)
 
 
 async def create_problemset(
@@ -64,38 +70,46 @@ async def add_problems(
 
 async def query_problem(session: AsyncSession, problem_id: uuid.UUID) -> Problem | None:
     problem_db = (
-        await session.exec(select(DBProblem).where(DBProblem.id == problem_id))
+        await session.exec(
+            select(DBProblem)
+            .where(DBProblem.id == problem_id)
+            .options(selectinload(queryable(DBProblem.options)))
+        )
     ).one_or_none()
-    return await dbproblem2pydproblem(problem_db) if problem_db is not None else None
+    return (
+        Problem.model_validate(problem_db, from_attributes=True)
+        if problem_db is not None
+        else None
+    )
 
 
 async def search_problem(
     session: AsyncSession,
-    kw: str,
+    kw: str | None = None,
     problemset_id: uuid.UUID | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> list[Problem]:
-    if not kw:
-        return []
-
     stmt = select(DBProblem)
-    if problemset_id is not None:
+    if problemset_id:
         stmt = stmt.where(DBProblem.problemset_id == problemset_id)
-    stmt = (
-        stmt.outerjoin(DBOption).filter(
-            or_(
-                col(DBProblem.content).icontains(kw),
-                col(DBOption.content).icontains(kw),
+    if kw:
+        stmt = (
+            stmt.outerjoin(DBOption).filter(
+                or_(
+                    col(DBProblem.content).icontains(kw),
+                    col(DBOption.content).icontains(kw),
+                )
             )
-        )
-    ).distinct()
+        ).distinct()
     page = max(1, page)
     page_size = max(0, page_size)
     if page_size != 0:
         stmt = stmt.offset(page_size * (page - 1)).limit(page_size)
-    db_problems = (await session.exec(stmt)).all()
-    problems = [(await dbproblem2pydproblem(p)) for p in db_problems]
+    db_problems = (
+        await session.exec(stmt.options(selectinload(queryable(DBProblem.options))))
+    ).all()
+    problems = [Problem.model_validate(p, from_attributes=True) for p in db_problems]
 
     return problems
 
@@ -147,8 +161,9 @@ async def sample(
         .where(DBProblem.problemset_id == problemset_id)
         .order_by(func.random())
         .limit(n)
+        .options(selectinload(queryable(DBProblem.options)))
     )
-    return [(await dbproblem2pydproblem(p)) for p in db_problems]
+    return [Problem.model_validate(p, from_attributes=True) for p in db_problems]
 
 
 async def list_problemset(session: AsyncSession) -> list[ProblemSet]:

@@ -2,7 +2,6 @@ import logging
 import uuid
 from typing import Literal
 
-import uvicorn
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel
 
@@ -16,8 +15,8 @@ from app.db.operations import (
     list_problemset,
     search_problem,
 )
-from app.schemas.sheet import BaseProblem as ProblemSubmit
-from app.schemas.sheet import Problem, ProblemSet
+from app.schemas.problem import BaseProblem as ProblemSubmit
+from app.schemas.problem import Problem, ProblemSet
 
 router = APIRouter(tags=["problem"])
 logger = logging.getLogger("uvicorn.error")
@@ -64,6 +63,16 @@ async def search(
     page_size: int = Query(20),
 ) -> list[Problem]:
     return await search_problem(session, kw, problemset_id, page, page_size)
+
+
+@router.get("/get")
+async def get_problems(
+    session: DbSessionDep,
+    problemset_id: uuid.UUID | None = Query(None),
+    page: int = Query(1),
+    page_size: int = Query(20),
+) -> list[Problem]:
+    return await search_problem(session, None, problemset_id, page, page_size)
 
 
 @router.get("/count")
