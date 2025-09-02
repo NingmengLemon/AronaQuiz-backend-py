@@ -153,17 +153,12 @@ async def search_problem(
 async def delete_problems(
     session: AsyncSession,
     *problem_ids: uuid.UUID,
-    problemset_id: uuid.UUID | None = None,
 ) -> None:
     stmt = delete(DBProblem)
-    if problem_ids:
-        stmt = stmt.where(col(DBProblem.id).in_(problem_ids))
-    if problemset_id:
-        stmt = stmt.where(col(DBProblem.problemset_id) == problemset_id)
+    stmt = stmt.where(col(DBProblem.id).in_(problem_ids))
     await session.exec(stmt)  # type: ignore
     stmt = delete(DBOption)
-    if problem_ids:
-        stmt = stmt.where(col(DBOption.problem_id).in_(problem_ids))
+    stmt = stmt.where(col(DBOption.problem_id).in_(problem_ids))
     await session.exec(stmt)  # type: ignore
 
 
@@ -176,7 +171,9 @@ async def delete_problemset(
     if not problemset:
         return None
     await session.delete(problemset)
-    await delete_problems(session, problemset_id=problemset_id)
+    await session.exec(
+        delete(DBProblem).where(col(DBProblem.problemset_id) == problemset_id)  # type: ignore
+    )
     return problemset_id
 
 
@@ -214,6 +211,13 @@ async def list_problemset(session: AsyncSession) -> list[ProblemSet]:
             ],
         )
     ]
+
+
+async def delete_all(session: AsyncSession) -> None:
+    # https://github.com/fastapi/sqlmodel/issues/909
+    await session.exec(delete(DBProblemSet))  # type: ignore
+    await session.exec(delete(DBProblem))  # type: ignore
+    await session.exec(delete(DBOption))  # type: ignore
 
 
 @overload

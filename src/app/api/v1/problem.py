@@ -110,7 +110,7 @@ async def delete(session: DbSessionDep, ids: list[uuid.UUID] = Body()) -> Litera
 @in_session
 @in_transaction
 async def delete_all(
-    session: DbSessionDep, problemset_id: uuid.UUID | None = Body(None)
+    session: DbSessionDep, problemset_id: uuid.UUID = Body(None)
 ) -> Literal["ok"]:
-    await delete_problems(session, problemset_id=problemset_id)
+    await delete_all(session, problemset_id=problemset_id)
     return "ok"

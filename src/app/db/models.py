@@ -3,6 +3,7 @@ import uuid
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Awaitable, Generic, TypeVar
 
+from sqlalchemy import PrimaryKeyConstraint
 from sqlalchemy.ext.asyncio.session import AsyncAttrs as _AsyncAttrs
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -84,8 +85,9 @@ class DBUser(SQLModel, AsyncAttrs, table=True):
 
 class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
     __tablename__ = "answerrecord"  # type: ignore
-    user_id: uuid.UUID = Field(foreign_key="user.id", primary_key=True)
-    problem_id: uuid.UUID = Field(foreign_key="problem.id", primary_key=True)
+    __table_args__ = (PrimaryKeyConstraint("user_id", "problem_id"),)
+    user_id: uuid.UUID = Field(foreign_key="user.id")
+    problem_id: uuid.UUID = Field(foreign_key="problem.id")
 
     correct_count: int = 0
     total_count: int = 0
