@@ -1,19 +1,25 @@
 import datetime
 import logging
 import uuid
-from enum import StrEnum, auto
-from typing import ParamSpec, TypeVar, cast, overload
+from enum import Enum, StrEnum, auto
+from typing import Any, ParamSpec, TypeVar, cast, overload
 
 from sqlalchemy.orm import QueryableAttribute, selectinload
-from sqlmodel import col, delete, func, or_, select
+from sqlmodel import and_, col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..schemas.problem import Problem, ProblemSet
+from ..schemas.problem import Problem, ProblemSet, ProblemWithStat
 from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser
 
 logger = logging.getLogger("uvicorn.error")
 T = TypeVar("T")
 P = ParamSpec("P")
+
+DEFAULT_USERNAME = "anonymous"
+
+
+class VoidType(Enum):
+    VOID = type("_VOID", (), {})
 
 
 class ProblemSetCreateStatus(StrEnum):
@@ -72,6 +78,7 @@ async def add_problems(
 
 
 async def query_problem(session: AsyncSession, problem_id: uuid.UUID) -> Problem | None:
+    """not public"""
     problem_db = (
         await session.exec(
             select(DBProblem)
@@ -92,19 +99,41 @@ async def search_problem(
     problemset_id: uuid.UUID | None = None,
     page: int = 1,
     page_size: int = 20,
-) -> list[Problem]:
-    stmt = select(DBProblem)
+    user_id: uuid.UUID | None | VoidType = VoidType.VOID,
+) -> list[ProblemWithStat]:
+    stmt = select(
+        DBProblem,
+        func.coalesce(DBAnswerRecord.correct_count, 0).label("correct_count"),
+        func.coalesce(DBAnswerRecord.total_count, 0).label("total_count"),
+    )
     if problemset_id:
         stmt = stmt.where(DBProblem.problemset_id == problemset_id)
     if kw:
         stmt = (
-            stmt.outerjoin(DBOption).filter(
-                or_(
-                    col(DBProblem.content).icontains(kw),
-                    col(DBOption.content).icontains(kw),
+            (
+                stmt.outerjoin(DBOption).filter(
+                    or_(
+                        col(DBProblem.content).icontains(kw),
+                        col(DBOption.content).icontains(kw),
+                    )
                 )
             )
-        ).distinct()
+            .distinct()
+            .outerjoin(
+                DBAnswerRecord,
+                and_(
+                    (DBAnswerRecord.problem_id == DBProblem.id),
+                    (
+                        DBAnswerRecord.user_id
+                        == (
+                            user_id
+                            if user_id is uuid.UUID
+                            else (await ensure_user(session, DEFAULT_USERNAME)).id
+                        )
+                    ),
+                ),
+            )
+        )
     page = max(1, page)
     page_size = max(0, page_size)
     if page_size != 0:
@@ -112,9 +141,13 @@ async def search_problem(
     db_problems = (
         await session.exec(stmt.options(selectinload(queryable(DBProblem.options))))
     ).all()
-    problems = [Problem.model_validate(p, from_attributes=True) for p in db_problems]
+    result: list[ProblemWithStat] = []
+    for p, c, t in db_problems:
+        result.append(ProblemWithStat.model_validate(p, from_attributes=True))
+        result[-1].correct_count = c
+        result[-1].total_count = t
 
-    return problems
+    return result
 
 
 async def delete_problems(
@@ -197,7 +230,7 @@ async def query_user(
     username: str | None = None,
     user_id: uuid.UUID | None = None,
 ) -> DBUser | None:
-    if (username is None) ^ (user_id is None):
+    if not ((username is None) ^ (user_id is None)):
         raise ValueError("choose from username and user_id")
     return (
         await session.exec(
@@ -267,3 +300,12 @@ async def report_attempt(
         record.correct_count += 1
     record.last_attempt = time or datetime.datetime.now()
     session.add(record)
+
+
+async def query_statistic(
+    session: AsyncSession,
+    *,
+    problem_id: uuid.UUID | None = None,
+    user_id: uuid.UUID | None = None,
+) -> Any:
+    return NotImplemented

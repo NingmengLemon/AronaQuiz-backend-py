@@ -17,7 +17,7 @@ from app.db.operations import (
 )
 from app.decos import in_session, in_transaction
 from app.schemas.problem import BaseProblem as ProblemSubmit
-from app.schemas.problem import Problem, ProblemSet
+from app.schemas.problem import Problem, ProblemSet, ProblemWithStat
 
 router = APIRouter(tags=["problem"])
 logger = logging.getLogger("uvicorn.error")
@@ -70,7 +70,7 @@ async def search(
     problemset_id: uuid.UUID | None = Query(None),
     page: int = Query(1),
     page_size: int = Query(20),
-) -> list[Problem]:
+) -> list[ProblemWithStat]:
     return await search_problem(session, kw, problemset_id, page, page_size)
 
 
@@ -82,7 +82,7 @@ async def get_problems(
     problemset_id: uuid.UUID | None = Query(None),
     page: int = Query(1),
     page_size: int = Query(20),
-) -> list[Problem]:
+) -> list[ProblemWithStat]:
     return await search_problem(session, None, problemset_id, page, page_size)
 
 

@@ -22,7 +22,33 @@ class Problem(BaseProblem):
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
 
 
+class Statistic(BaseModel):
+    correct_count: int | None = None
+    total_count: int | None = None
+
+
+class ProblemWithStat(Problem, Statistic):
+    pass
+
+
+class BaseUser(BaseModel):
+    username: str
+    nickname: str
+
+
+class User(BaseUser):
+    id: uuid.UUID
+
+
 class ProblemSet(BaseModel):
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
     name: str
     count: int
+
+
+class SingleUserStat(Statistic):
+    problem_id: uuid.UUID
+
+
+class UserStat(BaseUser):
+    problems: list[SingleUserStat] = Field(default_factory=list)

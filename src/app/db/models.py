@@ -84,9 +84,8 @@ class DBUser(SQLModel, AsyncAttrs, table=True):
 
 class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
     __tablename__ = "answerrecord"  # type: ignore
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
-    problem_id: uuid.UUID = Field(foreign_key="problem.id", index=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", primary_key=True)
+    problem_id: uuid.UUID = Field(foreign_key="problem.id", primary_key=True)
 
     correct_count: int = 0
     total_count: int = 0
