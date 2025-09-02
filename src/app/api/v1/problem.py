@@ -15,6 +15,7 @@ from app.db.operations import (
     list_problemset,
     search_problem,
 )
+from app.decos import in_session, in_transaction
 from app.schemas.problem import BaseProblem as ProblemSubmit
 from app.schemas.problem import Problem, ProblemSet
 
@@ -28,17 +29,23 @@ class CreateSetResp(BaseModel):
 
 
 @router.post("/create_set")
+@in_session
+@in_transaction
 async def create_set(session: DbSessionDep, name: str) -> CreateSetResp:
     id_, status = await create_problemset(session, name)
     return CreateSetResp(id=id_, status=status)
 
 
 @router.get("/list_set")
+@in_session
+@in_transaction
 async def list_set(session: DbSessionDep) -> list[ProblemSet]:
     return await list_problemset(session)
 
 
 @router.post("/add")
+@in_session
+@in_transaction
 async def add(
     session: DbSessionDep,
     problems: list[ProblemSubmit] = Body(),
@@ -55,6 +62,8 @@ async def add(
 
 
 @router.get("/search")
+@in_session
+@in_transaction
 async def search(
     session: DbSessionDep,
     kw: str = Query(),
@@ -66,6 +75,8 @@ async def search(
 
 
 @router.get("/get")
+@in_session
+@in_transaction
 async def get_problems(
     session: DbSessionDep,
     problemset_id: uuid.UUID | None = Query(None),
@@ -76,6 +87,8 @@ async def get_problems(
 
 
 @router.get("/count")
+@in_session
+@in_transaction
 async def get_count(
     session: DbSessionDep,
     problemset_id: uuid.UUID | None = Query(None),
@@ -84,6 +97,8 @@ async def get_count(
 
 
 @router.post("/delete")
+@in_session
+@in_transaction
 async def delete(session: DbSessionDep, ids: list[uuid.UUID] = Body()) -> Literal["ok"]:
     if len(ids) == 0:
         raise HTTPException(400, "需要填写将要删除的ID")
@@ -92,6 +107,8 @@ async def delete(session: DbSessionDep, ids: list[uuid.UUID] = Body()) -> Litera
 
 
 @router.post("/delete_all")
+@in_session
+@in_transaction
 async def delete_all(
     session: DbSessionDep, problemset_id: uuid.UUID | None = Body(None)
 ) -> Literal["ok"]:

@@ -47,11 +47,19 @@ class AsyncDatabaseCore:
             )
         self._startup_event.set()
 
-    def get_session(self, autoflush: bool = False) -> AsyncSession:
-        """注意返回值是 AsyncSession 而不是 Session"""
+    def get_session(
+        self, autoflush: bool = False, expire_on_commit: bool = False
+    ) -> AsyncSession:
+        """注意返回值是 AsyncSession 而不是 Session
+
+        注意 AsyncSession 不会自动关闭"""
         if not self.started.is_set():
             raise self.NotStarted()
-        return AsyncSession(self._engine, autoflush=autoflush)
+        return AsyncSession(
+            self._engine,
+            autoflush=autoflush,
+            expire_on_commit=expire_on_commit,
+        )
 
     async def run_sync(
         self,

@@ -1,17 +1,19 @@
+import datetime
 import logging
 import uuid
 from enum import StrEnum, auto
-from typing import TypeVar, cast
+from typing import ParamSpec, TypeVar, cast, overload
 
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..schemas.problem import Problem, ProblemSet
-from .models import DBOption, DBProblem, DBProblemSet
+from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser
 
 logger = logging.getLogger("uvicorn.error")
 T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class ProblemSetCreateStatus(StrEnum):
@@ -34,6 +36,7 @@ async def create_problemset(
         return problemset.id, ProblemSetCreateStatus.already_exists
     problemset = DBProblemSet(name=name, problems=[])
     session.add(problemset)
+
     return problemset.id, ProblemSetCreateStatus.success
 
 
@@ -178,3 +181,89 @@ async def list_problemset(session: AsyncSession) -> list[ProblemSet]:
             ],
         )
     ]
+
+
+@overload
+async def query_user(session: AsyncSession, *, username: str) -> DBUser | None: ...
+
+
+@overload
+async def query_user(session: AsyncSession, *, user_id: uuid.UUID) -> DBUser | None: ...
+
+
+async def query_user(
+    session: AsyncSession,
+    *,
+    username: str | None = None,
+    user_id: uuid.UUID | None = None,
+) -> DBUser | None:
+    if (username is None) ^ (user_id is None):
+        raise ValueError("choose from username and user_id")
+    return (
+        await session.exec(
+            select(DBUser).where(
+                DBUser.username == username if username else DBUser.id == user_id
+            )
+        )
+    ).one_or_none()
+
+
+async def create_user(session: AsyncSession, username: str) -> DBUser:
+    user = DBUser(username=username)
+    session.add(user)
+
+    return user
+
+
+async def ensure_user(session: AsyncSession, username: str) -> DBUser:
+    if (user := await query_user(session, username=username)) is None:
+        user = await create_user(session, username)
+    return user
+
+
+async def create_record(
+    session: AsyncSession, user_id: uuid.UUID, problem_id: uuid.UUID
+) -> DBAnswerRecord:
+    record = DBAnswerRecord(user_id=user_id, problem_id=problem_id)
+    session.add(record)
+
+    return record
+
+
+async def ensure_record(
+    session: AsyncSession, user_id: uuid.UUID, problem_id: uuid.UUID
+) -> DBAnswerRecord:
+    if (
+        record := (
+            await session.exec(
+                select(DBAnswerRecord).where(
+                    DBAnswerRecord.user_id == user_id,
+                    DBAnswerRecord.problem_id == problem_id,
+                )
+            )
+        ).one_or_none()
+    ) is None:
+        record = await create_record(
+            session,
+            user_id,
+            problem_id,
+        )
+    return record
+
+
+async def report_attempt(
+    session: AsyncSession,
+    problem_id: uuid.UUID,
+    user_id: uuid.UUID,
+    correct: bool,
+    time: datetime.datetime | None = None,
+) -> None:
+    problem = await query_problem(session, problem_id)
+    if problem is None:
+        raise ValueError("no problem found")
+    record = await ensure_record(session, user_id, problem_id)
+    record.total_count += 1
+    if correct:
+        record.correct_count += 1
+    record.last_attempt = time or datetime.datetime.now()
+    session.add(record)

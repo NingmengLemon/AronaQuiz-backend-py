@@ -77,9 +77,9 @@ class DBUser(SQLModel, AsyncAttrs, table=True):
     __tablename__ = "user"  # type: ignore
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     username: str = Field(unique=True)
-    password_hash: str
-    password_salt: str
-    nickname: str
+    password_hash: str | None = None
+    password_salt: str | None = None
+    nickname: str | None = None
 
 
 class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
@@ -88,9 +88,11 @@ class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
     problem_id: uuid.UUID = Field(foreign_key="problem.id", index=True)
 
-    correct_count: int = Field(0, ge=0)
-    total_count: int = Field(0, ge=0)
-    last_attempt: datetime.datetime = Field(default_factory=datetime.datetime.now)
+    correct_count: int = 0
+    total_count: int = 0
+    last_attempt: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.fromtimestamp(0)
+    )
 
 
 TABLES = [
