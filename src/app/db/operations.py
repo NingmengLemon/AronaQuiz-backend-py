@@ -247,6 +247,7 @@ async def query_user(
 async def create_user(session: AsyncSession, username: str) -> DBUser:
     user = DBUser(username=username)
     session.add(user)
+    await session.flush()
     return user
 
 
@@ -261,6 +262,7 @@ async def create_record(
 ) -> DBAnswerRecord:
     record = DBAnswerRecord(user_id=user_id, problem_id=problem_id)
     session.add(record)
+    await session.flush()
     return record
 
 
