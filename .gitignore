@@ -10,5 +10,8 @@ wheels/
 .venv
 .env
 *.db
+!example.db
 *.csv
 *.log
+*.sqlite3.lock
+*.db.lock
