@@ -17,10 +17,9 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     DB_NAME = "hdusp2"
     DATABASE_URL = f"sqlite+aiosqlite:///data/{DB_NAME}.db"  # 后续要改
 
-    dbcore = AsyncDatabaseCore(DATABASE_URL, TABLES)
-    await dbcore.startup()
-    set_session_getter(dbcore.get_session)
-    yield
+    async with AsyncDatabaseCore(DATABASE_URL, TABLES) as dbcore:
+        set_session_getter(dbcore.get_session)
+        yield
 
 
 app = FastAPI(lifespan=lifespan)

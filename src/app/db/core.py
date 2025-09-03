@@ -1,7 +1,8 @@
 import asyncio
 import functools
 from collections.abc import AsyncGenerator
-from typing import Callable, Concatenate, ParamSpec, TypeVar
+from types import TracebackType
+from typing import Callable, Concatenate, ParamSpec, Self, TypeVar
 
 from sqlalchemy.ext.asyncio.engine import create_async_engine
 from sqlalchemy.schema import Table
@@ -87,3 +88,18 @@ class AsyncDatabaseCore:
     ) -> AsyncGenerator[AsyncSession, None]:
         async with self.get_session(autoflush) as session:
             yield session
+
+    async def stop(self) -> None:
+        await self._engine.dispose()
+
+    async def __aenter__(self) -> Self:
+        await self.startup()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        await self.stop()
