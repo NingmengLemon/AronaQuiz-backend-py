@@ -1,6 +1,6 @@
 import functools
 from collections.abc import Awaitable, Callable
-from typing import Any, Concatenate, Generic, ParamSpec, Protocol, TypeVar, cast
+from typing import Concatenate, ParamSpec, Protocol, TypeVar
 
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession

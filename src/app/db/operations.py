@@ -9,8 +9,13 @@ from sqlmodel import and_, col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.decos import in_transaction
+from app.schemas.problem import (
+    ProblemResponse,
+    ProblemSetCreateStatus,
+    ProblemSetResponse,
+    ProblemSubmit,
+)
 
-from ..schemas.problem import Problem, ProblemSet, ProblemWithStat
 from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser
 
 logger = logging.getLogger("uvicorn.error")
@@ -22,11 +27,6 @@ DEFAULT_USERNAME = "anonymous"
 
 class VoidType(Enum):
     VOID = type("_VOID", (), {})
-
-
-class ProblemSetCreateStatus(StrEnum):
-    success = auto()
-    already_exists = auto()
 
 
 def queryable(o: T) -> QueryableAttribute[T]:
@@ -51,7 +51,7 @@ async def create_problemset(
 
 @in_transaction()
 async def add_problems(
-    session: AsyncSession, problemset_id: uuid.UUID, *problems: Problem
+    session: AsyncSession, problemset_id: uuid.UUID, *problems: ProblemSubmit
 ) -> list[uuid.UUID] | None:
     problemset = (
         await session.exec(select(DBProblemSet).where(DBProblemSet.id == problemset_id))
@@ -81,7 +81,9 @@ async def add_problems(
     return added_ids
 
 
-async def query_problem(session: AsyncSession, problem_id: uuid.UUID) -> Problem | None:
+async def query_problem(
+    session: AsyncSession, problem_id: uuid.UUID
+) -> ProblemResponse | None:
     """not public"""
     problem_db = (
         await session.exec(
@@ -91,7 +93,7 @@ async def query_problem(session: AsyncSession, problem_id: uuid.UUID) -> Problem
         )
     ).one_or_none()
     return (
-        Problem.model_validate(problem_db, from_attributes=True)
+        ProblemResponse.model_validate(problem_db, from_attributes=True)
         if problem_db is not None
         else None
     )
@@ -104,7 +106,7 @@ async def search_problem(
     page: int = 1,
     page_size: int = 20,
     user_id: uuid.UUID | None | VoidType = VoidType.VOID,
-) -> list[ProblemWithStat]:
+) -> list[ProblemResponse]:
     stmt = select(
         DBProblem,
         func.coalesce(DBAnswerRecord.correct_count, 0).label("correct_count"),
@@ -144,9 +146,9 @@ async def search_problem(
     db_problems = (
         await session.exec(stmt.options(selectinload(queryable(DBProblem.options))))
     ).all()
-    result: list[ProblemWithStat] = []
+    result: list[ProblemResponse] = []
     for p, c, t in db_problems:
-        result.append(ProblemWithStat.model_validate(p, from_attributes=True))
+        result.append(ProblemResponse.model_validate(p, from_attributes=True))
         result[-1].correct_count = c
         result[-1].total_count = t
 
@@ -193,7 +195,7 @@ async def get_problem_count(
 
 async def sample(
     session: AsyncSession, problemset_id: uuid.UUID, n: int = 20
-) -> list[Problem]:
+) -> list[ProblemSubmit]:
     db_problems = await session.exec(
         select(DBProblem)
         .where(DBProblem.problemset_id == problemset_id)
@@ -201,13 +203,13 @@ async def sample(
         .limit(n)
         .options(selectinload(queryable(DBProblem.options)))
     )
-    return [Problem.model_validate(p, from_attributes=True) for p in db_problems]
+    return [ProblemSubmit.model_validate(p, from_attributes=True) for p in db_problems]
 
 
-async def list_problemset(session: AsyncSession) -> list[ProblemSet]:
+async def list_problemset(session: AsyncSession) -> list[ProblemSetResponse]:
     dbproblemsets = (await session.exec(select(DBProblemSet))).all()
     return [
-        ProblemSet(id=ps.id, name=ps.name, count=cnt)
+        ProblemSetResponse(id=ps.id, name=ps.name, count=cnt)
         for ps, cnt in zip(
             dbproblemsets,
             [

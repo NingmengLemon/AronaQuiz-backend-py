@@ -9,7 +9,7 @@ from app.db.decos import in_session, in_transaction
 from app.db.models import DBUser
 from app.db.operations import ensure_user, query_problem, query_user, sample
 from app.db.operations import report_attempt as report_attempt_db
-from app.schemas.problem import Problem
+from app.schemas.problem import ProblemSubmit
 
 router = APIRouter(tags=["sheet"])
 
@@ -19,7 +19,7 @@ router = APIRouter(tags=["sheet"])
 @in_transaction()
 async def random(
     session: DbSessionDep, problemset_id: uuid.UUID = Query(), n: int = Query(20)
-) -> list[Problem]:
+) -> list[ProblemSubmit]:
     return await sample(session, problemset_id=problemset_id, n=n)
 
 
