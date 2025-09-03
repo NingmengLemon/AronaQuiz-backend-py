@@ -15,7 +15,7 @@ from .db.models import TABLES
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     os.makedirs("./data", exist_ok=True)
     DB_NAME = "hdusp2"
-    DATABASE_URL = f"sqlite+aiosqlite:///data/{DB_NAME}.db"
+    DATABASE_URL = f"sqlite+aiosqlite:///data/{DB_NAME}.db"  # 后续要改
 
     dbcore = AsyncDatabaseCore(DATABASE_URL, TABLES)
     await dbcore.startup()
@@ -27,14 +27,14 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(api_router, prefix="/api")
 
 
-origins: list[str] = ["*"]  # 开发阶段就先这样
+PROD_ORIGINS: list[str] = []
+DEV_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$"
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    # allow_origin_regex=r"https://",
-    # allow_credentials=True,
+    allow_origins=PROD_ORIGINS,
+    allow_origin_regex=DEV_ORIGIN_REGEX,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Custom-Header"],
     max_age=600,
 )
