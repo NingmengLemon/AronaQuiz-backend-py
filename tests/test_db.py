@@ -1,11 +1,14 @@
+import asyncio
+import datetime
 import os
+import time
 import uuid
 from typing import AsyncGenerator
 
 import dotenv
 import pytest
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import delete, select
+from sqlmodel import col, delete, select
 
 from app.db.core import AsyncDatabaseCore
 from app.db.models import (
@@ -19,12 +22,18 @@ from app.db.operations import (
     ProblemSetCreateStatus,
     add_problems,
     create_problemset,
+    create_record,
     create_user,
     delete_all,
     delete_problems,
     delete_problemset,
+    ensure_record,
+    ensure_user,
     get_problem_count,
+    list_problemset,
     query_problem,
+    query_user,
+    report_attempt,
     sample,
     search_problem,
 )
@@ -123,9 +132,10 @@ async def test_multiadd(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
                 ],
             )
         )
+    start_time = time.time()
     async with db.get_session() as session:
         await add_problems(session, prepare_db, *problems)
-        await session.commit()
+        print(f"添加1006个问题耗时: {time.time() - start_time:.3f}秒")
         assert (await get_problem_count(session)) == 1006
 
 
@@ -426,7 +436,6 @@ async def test_problemset(db: AsyncDatabaseCore, prepare_db: uuid.UUID) -> None:
 
 async def test_user_operations(db: AsyncDatabaseCore) -> None:
     """测试用户相关操作"""
-    from app.db.operations import create_user, ensure_user, query_user
 
     async with db.get_session() as session:
         # 测试创建用户
@@ -465,15 +474,6 @@ async def test_answer_record_operations(
     db: AsyncDatabaseCore, prepare_db: uuid.UUID
 ) -> None:
     """测试答题记录相关操作"""
-    import datetime
-
-    from app.db.operations import (
-        create_record,
-        create_user,
-        ensure_record,
-        query_user,
-        report_attempt,
-    )
 
     async with db.get_session() as session:
         # 创建用户和问题
@@ -597,7 +597,6 @@ async def test_concurrent_operations(
     db: AsyncDatabaseCore, prepare_db: uuid.UUID
 ) -> None:
     """测试并发操作"""
-    import asyncio
 
     async def add_problems_batch(batch_id: int) -> None:
         async with db.get_session() as session:
@@ -678,7 +677,6 @@ async def test_data_validation_and_constraints(
 
 async def test_problemset_operations_extended(db: AsyncDatabaseCore) -> None:
     """测试问题集操作的扩展功能"""
-    from app.db.operations import create_problemset, delete_problemset, list_problemset
 
     async with db.get_session() as session:
         # 创建多个问题集
@@ -869,7 +867,6 @@ async def test_performance_and_bulk_operations(
     db: AsyncDatabaseCore, prepare_db: uuid.UUID
 ) -> None:
     """测试性能和批量操作"""
-    import time
 
     async with db.get_session() as session:
         # 测试批量添加大量问题
@@ -893,8 +890,7 @@ async def test_performance_and_bulk_operations(
         result = await add_problems(session, prepare_db, *bulk_problems)
         await session.commit()
 
-        add_time = time.time() - start_time
-        print(f"添加100个问题耗时: {add_time:.3f}秒")
+        print(f"添加100个问题耗时: {time.time() - start_time:.3f}秒")
 
         assert result is not None
         assert len(result) == 100
@@ -1057,8 +1053,6 @@ async def test_database_integrity_and_relationships(
         await session.commit()
 
         # 验证选项也被删除了
-        from sqlmodel import col
-
         remaining_options = (
             await session.exec(select(DBOption).where(col(DBOption.id).in_(option_ids)))
         ).all()
@@ -1069,7 +1063,6 @@ async def test_search_with_user_statistics(
     db: AsyncDatabaseCore, prepare_db: uuid.UUID
 ) -> None:
     """测试带用户统计的搜索功能"""
-    from app.db.operations import create_user, report_attempt
 
     async with db.get_session() as session:
         # 创建用户
