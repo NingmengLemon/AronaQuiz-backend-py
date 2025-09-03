@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .api import router as api_router
 from .api.deps import set_session_getter
@@ -24,3 +25,16 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(api_router, prefix="/api")
+
+
+origins: list[str] = ["*"]  # 开发阶段就先这样
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    # allow_origin_regex=r"https://",
+    # allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Custom-Header"],
+    max_age=600,
+)
