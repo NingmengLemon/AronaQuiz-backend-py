@@ -131,7 +131,7 @@ async def search_problem(
                 DBAnswerRecord.user_id
                 == (
                     user_id
-                    if user_id is uuid.UUID
+                    if isinstance(user_id, uuid.UUID)
                     else (await ensure_user(session, DEFAULT_USERNAME)).id
                 )
             ),
