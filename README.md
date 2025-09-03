@@ -13,4 +13,20 @@ uv sync --no-dev
 uv run fastapi run src/app
 ```
 
-更多自定义参数自行添加, 需要开发用依赖就把`--no-dev`去掉
+更多自定义参数自行添加
+
+## 开发/测试
+
+clone, cd
+
+```bash
+uv sync --all-groups
+```
+
+提供 `data/example.db` 作为测试素材 (内容摘自 HDU 题库)
+
+运行测试:
+
+```bash
+uv run pytest
+```
