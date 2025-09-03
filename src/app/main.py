@@ -1,3 +1,4 @@
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -11,6 +12,7 @@ from .db.models import TABLES
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+    os.makedirs("./data", exist_ok=True)
     DB_NAME = "hdusp2"
     DATABASE_URL = f"sqlite+aiosqlite:///data/{DB_NAME}.db"
 
