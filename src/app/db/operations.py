@@ -8,6 +8,8 @@ from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import and_, col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.db.decos import in_transaction
+
 from ..schemas.problem import Problem, ProblemSet, ProblemWithStat
 from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser
 
@@ -31,6 +33,7 @@ def queryable(o: T) -> QueryableAttribute[T]:
     return cast(QueryableAttribute, o)
 
 
+@in_transaction()
 async def create_problemset(
     session: AsyncSession, name: str
 ) -> tuple[uuid.UUID, ProblemSetCreateStatus]:
@@ -46,6 +49,7 @@ async def create_problemset(
     return problemset.id, ProblemSetCreateStatus.success
 
 
+@in_transaction()
 async def add_problems(
     session: AsyncSession, problemset_id: uuid.UUID, *problems: Problem
 ) -> list[uuid.UUID] | None:
@@ -54,7 +58,7 @@ async def add_problems(
     ).one_or_none()
     if problemset is None:
         return None
-    added: list[uuid.UUID] = []
+    added_ids: list[uuid.UUID] = []
     for problem in problems:
         problem_db = DBProblem.model_validate(
             problem,
@@ -72,9 +76,9 @@ async def add_problems(
         ]
         problem_db.options = options_db
         session.add_all([problem_db, *options_db])
-        added.append(problem_id)
+        added_ids.append(problem_id)
 
-    return added
+    return added_ids
 
 
 async def query_problem(session: AsyncSession, problem_id: uuid.UUID) -> Problem | None:
@@ -149,6 +153,7 @@ async def search_problem(
     return result
 
 
+@in_transaction()
 async def delete_problems(
     session: AsyncSession,
     *problem_ids: uuid.UUID,
@@ -161,6 +166,7 @@ async def delete_problems(
     await session.exec(stmt)  # type: ignore
 
 
+@in_transaction()
 async def delete_problemset(
     session: AsyncSession, problemset_id: uuid.UUID
 ) -> None | uuid.UUID:
@@ -212,7 +218,9 @@ async def list_problemset(session: AsyncSession) -> list[ProblemSet]:
     ]
 
 
+@in_transaction()
 async def delete_all(session: AsyncSession) -> None:
+    # 加 type: ignore 的原因是:
     # https://github.com/fastapi/sqlmodel/issues/909
     await session.exec(delete(DBProblemSet))  # type: ignore
     await session.exec(delete(DBProblem))  # type: ignore
@@ -244,10 +252,10 @@ async def query_user(
     ).one_or_none()
 
 
+@in_transaction()
 async def create_user(session: AsyncSession, username: str) -> DBUser:
     user = DBUser(username=username)
     session.add(user)
-    await session.flush()
     return user
 
 
@@ -257,12 +265,12 @@ async def ensure_user(session: AsyncSession, username: str) -> DBUser:
     return user
 
 
+@in_transaction()
 async def create_record(
     session: AsyncSession, user_id: uuid.UUID, problem_id: uuid.UUID
 ) -> DBAnswerRecord:
     record = DBAnswerRecord(user_id=user_id, problem_id=problem_id)
     session.add(record)
-    await session.flush()
     return record
 
 
@@ -287,6 +295,7 @@ async def ensure_record(
     return record
 
 
+@in_transaction()
 async def report_attempt(
     session: AsyncSession,
     problem_id: uuid.UUID,

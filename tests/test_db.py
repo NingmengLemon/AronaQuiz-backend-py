@@ -4,14 +4,22 @@ from typing import AsyncGenerator
 
 import dotenv
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import delete, select
 
 from app.db.core import AsyncDatabaseCore
-from app.db.models import TABLES, DBAnswerRecord, DBProblem, DBUser
+from app.db.models import (
+    TABLES,
+    DBAnswerRecord,
+    DBOption,
+    DBProblem,
+    DBUser,
+)
 from app.db.operations import (
     ProblemSetCreateStatus,
     add_problems,
     create_problemset,
+    create_user,
     delete_all,
     delete_problems,
     delete_problemset,
@@ -722,15 +730,6 @@ async def test_problemset_operations_extended(db: AsyncDatabaseCore) -> None:
 
 async def test_edge_cases_and_error_handling(db: AsyncDatabaseCore) -> None:
     """测试边界情况和错误处理"""
-    from app.db.operations import (
-        add_problems,
-        create_problemset,
-        delete_problems,
-        delete_problemset,
-        get_problem_count,
-        query_problem,
-        sample,
-    )
 
     async with db.get_session() as session:
         # 测试对不存在的问题集添加问题
@@ -934,44 +933,18 @@ async def test_database_transactions_and_rollback(
     db: AsyncDatabaseCore, prepare_db: uuid.UUID
 ) -> None:
     """测试数据库事务和回滚"""
+    test_username = "Ayachi Nene"
     async with db.get_session() as session:
-        initial_count = await get_problem_count(session, prepare_db)
+        with pytest.raises(IntegrityError):
+            await create_user(session, test_username)
+            # 预期出现用户重名错误
+            await create_user(session, test_username)
 
-        try:
-            # 开始事务但不提交
-            await add_problems(
-                session,
-                prepare_db,
-                Problem(
-                    content="事务测试问题1",
-                    type=ProblemType.single_select,
-                    options=[Option(is_correct=True, order=0, content="答案1")],
-                ),
-                Problem(
-                    content="事务测试问题2",
-                    type=ProblemType.single_select,
-                    options=[Option(is_correct=True, order=0, content="答案2")],
-                ),
-            )
-
-            # 不提交事务，检查在同一session中的可见性
-            temp_count = await get_problem_count(session, prepare_db)
-            assert temp_count == initial_count + 2
-
-            # 模拟错误，触发回滚
-            await session.rollback()
-
-        except Exception:
-            await session.rollback()
-
-        # 检查回滚后的状态
-        final_count = await get_problem_count(session, prepare_db)
-        assert final_count == initial_count
-
-    # 在新的session中验证数据确实被回滚了
-    async with db.get_session() as new_session:
-        verify_count = await get_problem_count(new_session, prepare_db)
-        assert verify_count == initial_count
+        users = (
+            await session.exec(select(DBUser).where(DBUser.username == test_username))
+        ).all()
+        assert len(users) == 1  # 预期第一个 create 成功, 第二个失败并回滚
+        assert users[0].username == test_username
 
 
 async def test_unicode_and_special_characters(
@@ -1046,9 +1019,6 @@ async def test_database_integrity_and_relationships(
     db: AsyncDatabaseCore, prepare_db: uuid.UUID
 ) -> None:
     """测试数据库完整性和关系约束"""
-    from sqlmodel import select
-
-    from app.db.models import DBOption, DBProblem, DBProblemSet
 
     async with db.get_session() as session:
         # 添加一个问题
@@ -1104,7 +1074,6 @@ async def test_search_with_user_statistics(
     async with db.get_session() as session:
         # 创建用户
         user = await create_user(session, "test_stat_user")
-        await session.commit()
 
         # 添加问题
         problem_ids = await add_problems(
@@ -1122,7 +1091,6 @@ async def test_search_with_user_statistics(
             ),
         )
         assert problem_ids is not None
-        await session.commit()
 
         # 记录一些答题尝试
         await report_attempt(session, problem_ids[0], user.id, correct=True)
@@ -1131,7 +1099,6 @@ async def test_search_with_user_statistics(
 
         await report_attempt(session, problem_ids[1], user.id, correct=False)
         await report_attempt(session, problem_ids[1], user.id, correct=False)
-        await session.commit()
 
         # 测试带用户统计的搜索
         search_results = await search_problem(session, "统计测试", user_id=user.id)
@@ -1184,16 +1151,6 @@ async def test_problem_sampling_variations(
             sampled = await sample(session, prepare_db, size)
             expected_size = min(size, 20)  # 最多只能抽到20个
             assert len(sampled) == expected_size
-
-            # 验证抽样结果的随机性（连续两次抽样结果应该可能不同）
-            if size < 20:
-                second_sample = await sample(session, prepare_db, size)
-                # 至少有一定概率两次抽样结果不完全相同
-                first_ids = {p.id for p in sampled}
-                second_ids = {p.id for p in second_sample}
-                # 由于是随机抽样，可能会有差异，但这个测试可能会偶尔失败
-                # 所以我们只验证抽样数量正确
-                assert len(second_sample) == expected_size
 
 
 async def test_complex_query_scenarios(

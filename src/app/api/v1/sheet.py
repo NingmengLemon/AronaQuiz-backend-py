@@ -5,10 +5,10 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import DbSessionDep
+from app.db.decos import in_session, in_transaction
 from app.db.models import DBUser
 from app.db.operations import ensure_user, query_problem, query_user, sample
 from app.db.operations import report_attempt as report_attempt_db
-from app.decos import in_session, in_transaction
 from app.schemas.problem import Problem
 
 router = APIRouter(tags=["sheet"])
@@ -16,7 +16,7 @@ router = APIRouter(tags=["sheet"])
 
 @router.get("/random")
 @in_session
-@in_transaction
+@in_transaction()
 async def random(
     session: DbSessionDep, problemset_id: uuid.UUID = Query(), n: int = Query(20)
 ) -> list[Problem]:
@@ -25,7 +25,7 @@ async def random(
 
 @router.get("/report")
 @in_session
-@in_transaction
+@in_transaction()
 async def report_attempt(
     session: DbSessionDep,
     problem_id: uuid.UUID = Query(),
