@@ -41,7 +41,7 @@ from app.schemas.problem import OptionSubmit, ProblemSubmit, ProblemType
 
 dotenv.load_dotenv()
 
-DB_NAME = "hdusp2_test"
+DB_NAME = "hdusdp2_test_dbopts"
 
 
 @pytest.fixture(scope="module")

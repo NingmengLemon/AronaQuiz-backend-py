@@ -99,7 +99,7 @@ uv run pytest
 - `GET /get` - 获取问题列表
 - `GET /count` - 获取问题数量
 - `POST /delete` - 删除问题
-- `POST /delete_all` - 删除所有问题 (测试用)
+- `POST /_delete_all` - 删除所有问题 (测试用)
 
 #### 题目表 (`/api/v1/sheet`)
 

@@ -12,7 +12,7 @@ from app.db.operations import create_problemset, create_user, delete_all
 from app.main import app
 
 # 测试数据库配置
-TEST_DB_NAME = "hdusdp2_test"
+TEST_DB_NAME = "hdusdp2_test_apis"
 
 
 @pytest.fixture(scope="module")
@@ -330,7 +330,7 @@ class TestProblemAPI:
         )
 
         # 删除所有问题
-        response = client.post("/api/v1/problem/delete_all")
+        response = client.post("/api/v1/problem/_delete_all")
         assert response.status_code == 200
         assert response.json() == "ok"
 
