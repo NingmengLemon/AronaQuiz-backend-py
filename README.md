@@ -27,7 +27,7 @@ clone, cd
 uv sync --all-groups
 ```
 
-提供 `data/example.db` 作为测试素材 (内容摘自 HDU 题库)
+提供 `data/example_data.*` 作为测试素材 (内容摘自 HDU 题库 和 AI 生成)
 
 运行测试:
 

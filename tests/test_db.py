@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import json
 import os
 import time
 import uuid
@@ -138,11 +139,31 @@ async def test_multiadd(
                 ],
             )
         )
+    with open("data/example_data.json", "r", encoding="utf-8") as fp:
+        sheet_ = json.load(fp)
+    additional = 0
     start_time = time.time()
     async with init_database.get_session() as session:
+        for s in sheet_:
+            i, _ = await create_problemset(session, s["name"])
+            await add_problems(
+                session,
+                i,
+                *[
+                    ProblemSubmit(
+                        content=p["content"],
+                        type=p["type"],
+                        options=[OptionSubmit(**o) for o in p["options"]],
+                    )
+                    for p in s["problems"]
+                ],
+            )
+            additional += len(s["problems"])
         await add_problems(session, init_problemset_uuid, *problems)
-        print(f"添加1006个问题耗时: {time.time() - start_time:.3f}秒")
-        assert (await get_problem_count(session)) == 1006
+        print(
+            f"添加 {len(problems) + additional} 个问题耗时: {time.time() - start_time:.3f}秒"
+        )
+        assert (await get_problem_count(session)) == len(problems) + additional
 
 
 async def test_query_problem(
