@@ -56,7 +56,7 @@ async def report_attempt_internal(
     summary="上报答题情况",
     description="""用户ID 留空时计入 anonymous 用户
     
-**It's more recommedned to use POST method**""",
+**It's more recommended to use POST method**""",
     deprecated=True,
 )
 async def report_attempt_get(
