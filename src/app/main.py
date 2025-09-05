@@ -10,11 +10,12 @@ from .api.deps import set_session_getter
 from .db.core import AsyncDatabaseCore
 from .db.models import TABLES
 
+DB_NAME = "hdusdp2"
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     os.makedirs("./data", exist_ok=True)
-    DB_NAME = "hdusp2"
     DATABASE_URL = f"sqlite+aiosqlite:///data/{DB_NAME}.db"  # 后续要改
 
     async with AsyncDatabaseCore(DATABASE_URL, TABLES) as dbcore:
