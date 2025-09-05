@@ -8,7 +8,7 @@ dependencies = [
     "aiosqlite>=0.21.0",
     "asyncpg>=0.30.0",
     "fastapi[standard]>=0.116.1",
-    "sqlalchemy>=2.0.43",
+    "sqlalchemy[aiosqlite,asyncio,postgresql-asyncpg]>=2.0.43",
     "sqlmodel>=0.0.24",
 ]
 
