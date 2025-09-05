@@ -35,6 +35,24 @@ uv sync --all-groups
 uv run pytest
 ```
 
+> 啊那我要是想自己快速体验一下呢
+
+首先按上文所述安装测试依赖
+
+然后运行 `test_multiadd` 测试项
+
+```bash
+uv run pytest tests/test_db.py::test_multiadd
+```
+
+将在 `data/` 下生成的 `hdusdp2_test_dbopts.db` 重命名为 `hdusdp2.db`
+
+按 [上文](#开发测试) 所述进行部署
+
+去 [关联的前端仓库](https://github.com/Bian-Mu/term2_web_frontend) 部署前端
+
+~~好了玩去吧~~
+
 ## (以下写给自己看)
 
 ### Models
@@ -45,7 +63,7 @@ uv run pytest
   - `DBProblem` - 问题模型
   - `DBProblemSet` - 问题集模型
   - `DBUser` - 用户模型
-  - `DBAnswerRecord` - 答题记录模型 (统计用~~, 计划后续改为记录每次答题而不是总数~~)
+  - `DBAnswerRecord` - 答题记录模型 (统计用 ~~, 计划后续改为记录每次答题而不是总数~~ )
 
 - 请求创建用模型 (带`Submit`后缀)
     没有`id`字段, 因为入库时会由数据库用模型自动生成
@@ -99,12 +117,13 @@ uv run pytest
 - `GET /get` - 获取问题列表
 - `GET /count` - 获取问题数量
 - `POST /delete` - 删除问题
-- `POST /_delete_all` - 删除所有问题 (测试用)
+- ~~`POST /_delete_all` - 删除所有问题 (测试用)~~ - 即将弃用
 
 #### 题目表 (`/api/v1/sheet`)
 
 - `GET /random` - 随机获取指定数量的题目
-- `GET /report` - 报告答题尝试 ~~(其实我觉得应该用POST? 但是既然前端都这么说了...)~~
+- ~~`GET /report` - 报告答题尝试~~ ~~(其实我觉得应该用POST? 但是既然前端都这么说了...)~~ (弃用, 仅作兼容性保留)
+- `POST /report` - 报告答题尝试 ~~(嗯于是真这么做了)~~
 
 ### 项目功能
 
