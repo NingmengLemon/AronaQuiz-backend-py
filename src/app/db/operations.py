@@ -1,7 +1,7 @@
 import datetime
 import logging
 import uuid
-from enum import Enum, StrEnum, auto
+from enum import Enum
 from typing import Any, ParamSpec, TypeVar, cast, overload
 
 from sqlalchemy.orm import QueryableAttribute, selectinload
