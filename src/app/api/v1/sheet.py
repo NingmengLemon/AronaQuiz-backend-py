@@ -14,7 +14,7 @@ from app.schemas.problem import ProblemSubmit
 router = APIRouter(tags=["sheet"])
 
 
-@router.get("/random")
+@router.get("/random", summary="随机抽取n道题目")
 @in_session
 @in_transaction()
 async def random(
@@ -23,7 +23,11 @@ async def random(
     return await sample(session, problemset_id=problemset_id, n=n)
 
 
-@router.get("/report")
+@router.get(
+    "/report",
+    summary="上报答题情况",
+    description="""用户id 留空时计入 anonymous 用户""",
+)
 @in_session
 @in_transaction()
 async def report_attempt(
@@ -33,6 +37,7 @@ async def report_attempt(
     time: datetime.datetime | None = Query(None),
     user_id: uuid.UUID | None = Query(None),
 ) -> Literal["ok"]:
+    # TODO: 上报完毕后返回当前正确情况统计数据
     user: DBUser | None = None
     if user_id is None:
         user = await ensure_user(session, "anonymous")
