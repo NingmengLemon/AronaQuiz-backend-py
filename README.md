@@ -35,9 +35,11 @@ uv sync --all-groups
 uv run pytest
 ```
 
-> 啊那我要是想自己快速体验一下呢
+## 体验
 
-首先按上文所述安装测试依赖
+可以使用测试用的样例数据进行快速体验
+
+首先按 [上文](#开发测试) 所述安装*测试用*依赖
 
 然后运行 `test_multiadd` 测试项
 
@@ -47,13 +49,13 @@ uv run pytest tests/test_db.py::test_multiadd
 
 将在 `data/` 下生成的 `hdusdp2_test_dbopts.db` 重命名为 `hdusdp2.db`
 
-按 [上文](#开发测试) 所述进行部署
+按 [上文](#部署) 所述进行部署
 
 去 [关联的前端仓库](https://github.com/Bian-Mu/term2_web_frontend) 部署前端
 
-~~好了玩去吧~~
+~~好了去玩吧~~
 
-## (以下写给自己看)
+## 项目内容概览
 
 ### Models
 
