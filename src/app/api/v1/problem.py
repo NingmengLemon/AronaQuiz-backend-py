@@ -69,7 +69,7 @@ async def add(
 @router.get(
     "/search",
     summary="搜索题目",
-    description="""每道题目额外带有给定用户id的答题正确情况统计 (通过 /sheet/report 上报), 留空时为 anonymous 共享用户
+    description="""每道题目额外带有给定用户 ID 的答题正确情况统计 (通过 /sheet/report 上报), 留空时为 anonymous 共享用户
 
 kw 可传入空字符串或留空, 此时不进行关键词筛选
 
@@ -98,9 +98,9 @@ async def search(
 @router.get(
     "/get",
     summary="获取题目",
-    description="""每道题目额外带有给定用户id的答题正确情况统计 (通过 /sheet/report 上报), 留空时为 anonymous 共享用户
+    description="""每道题目额外带有给定用户 ID 的答题正确情况统计 (通过 /sheet/report 上报), 留空时为 anonymous 共享用户
 
-等价于 kw 字段留空的 /search 接口
+等价于 kw 字段留空的 /problem/search 接口
 
 page_size 可填 0 表示不进行分页, 此时 page 被视为 1""",
 )
@@ -124,7 +124,7 @@ async def get_problems(
 
 
 @router.get(
-    "/count", summary="获取题目数量", description="习题集id留空则返回库中题目总数"
+    "/count", summary="获取题目数量", description="习题集 ID 留空则返回库中题目总数"
 )
 @in_session
 @in_transaction()
@@ -147,7 +147,12 @@ async def delete(
     return "ok"
 
 
-@router.post("/_delete_all", summary="删除全部题目", description="**仅供调试**")
+@router.post(
+    "/_delete_all",
+    summary="删除全部题目",
+    description="**仅供调试**",
+    deprecated=True,
+)
 @in_session
 @in_transaction()
 async def delete_all_problemsets(session: DbSessionDep) -> Literal["ok"]:

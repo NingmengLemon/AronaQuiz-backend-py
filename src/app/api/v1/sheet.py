@@ -2,7 +2,8 @@ import datetime
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.deps import DbSessionDep
 from app.db.decos import in_session, in_transaction
@@ -14,7 +15,7 @@ from app.schemas.problem import ProblemSubmit
 router = APIRouter(tags=["sheet"])
 
 
-@router.get("/random", summary="随机抽取n道题目")
+@router.get("/random", summary="随机抽取题目")
 @in_session
 @in_transaction()
 async def random(
@@ -23,21 +24,16 @@ async def random(
     return await sample(session, problemset_id=problemset_id, n=n)
 
 
-@router.get(
-    "/report",
-    summary="上报答题情况",
-    description="""用户id 留空时计入 anonymous 用户""",
-)
 @in_session
 @in_transaction()
-async def report_attempt(
-    session: DbSessionDep,
-    problem_id: uuid.UUID = Query(),
-    correct: bool = Query(),
-    time: datetime.datetime | None = Query(None),
-    user_id: uuid.UUID | None = Query(None),
-) -> Literal["ok"]:
-    # TODO: 上报完毕后返回当前正确情况统计数据
+async def report_attempt_internal(
+    session: AsyncSession,
+    problem_id: uuid.UUID,
+    correct: bool,
+    time: datetime.datetime | None = None,
+    user_id: uuid.UUID | None = None,
+) -> None:
+    # TODO: 返回上报后的统计数据
     user: DBUser | None = None
     if user_id is None:
         user = await ensure_user(session, "anonymous")
@@ -54,4 +50,49 @@ async def report_attempt(
         time=time,
     )
 
+
+@router.get(
+    "/report",
+    summary="上报答题情况",
+    description="""用户ID 留空时计入 anonymous 用户
+    
+**It's more recommedned to use POST method**""",
+    deprecated=True,
+)
+async def report_attempt_get(
+    session: DbSessionDep,
+    problem_id: uuid.UUID = Query(),
+    correct: bool = Query(),
+    time: datetime.datetime | None = Query(None),
+    user_id: uuid.UUID | None = Query(None),
+) -> Literal["ok"]:
+    await report_attempt_internal(
+        session,
+        problem_id=problem_id,
+        correct=correct,
+        time=time,
+        user_id=user_id,
+    )
+    return "ok"
+
+
+@router.post(
+    "/report",
+    summary="上报答题情况",
+    description="""用户ID 留空时计入 anonymous 用户""",
+)
+async def report_attempt(
+    session: DbSessionDep,
+    problem_id: uuid.UUID = Body(),
+    correct: bool = Body(),
+    time: datetime.datetime | None = Body(None),
+    user_id: uuid.UUID | None = Body(None),
+) -> Literal["ok"]:
+    await report_attempt_internal(
+        session,
+        problem_id=problem_id,
+        correct=correct,
+        time=time,
+        user_id=user_id,
+    )
     return "ok"
