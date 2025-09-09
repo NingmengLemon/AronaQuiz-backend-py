@@ -15,13 +15,15 @@ from app.db.operations import (
     list_problemset,
     search_problem,
 )
-from app.schemas.problem import (
-    CreateProblemSetResponse,
+from app.schemas.request import (
     DeleteProblemSubmit,
-    ProblemResponse,
-    ProblemSetResponse,
     ProblemSetSubmit,
     ProblemSubmit,
+)
+from app.schemas.response import (
+    CreateProblemSetResponse,
+    ProblemResponse,
+    ProblemSetResponse,
 )
 
 router = APIRouter(tags=["problem"])

@@ -18,6 +18,7 @@ from app.db.models import (
     DBOption,
     DBProblem,
     DBUser,
+    ProblemType,
 )
 from app.db.operations import (
     ProblemSetCreateStatus,
@@ -38,7 +39,7 @@ from app.db.operations import (
     sample,
     search_problem,
 )
-from app.schemas.problem import OptionSubmit, ProblemSubmit, ProblemType
+from app.schemas.request import OptionSubmit, ProblemSubmit
 
 dotenv.load_dotenv()
 

@@ -10,7 +10,7 @@ from app.db.decos import in_session, in_transaction
 from app.db.models import DBUser
 from app.db.operations import ensure_user, query_problem, query_user, sample
 from app.db.operations import report_attempt as report_attempt_db
-from app.schemas.problem import ProblemSubmit
+from app.schemas.request import ProblemSubmit
 
 router = APIRouter(tags=["sheet"])
 

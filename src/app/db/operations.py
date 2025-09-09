@@ -9,11 +9,11 @@ from sqlmodel import and_, col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.decos import in_transaction
-from app.schemas.problem import (
+from app.schemas.request import ProblemSubmit
+from app.schemas.response import (
     ProblemResponse,
     ProblemSetCreateStatus,
     ProblemSetResponse,
-    ProblemSubmit,
 )
 
 from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser
@@ -322,4 +322,4 @@ async def query_statistic(
     problem_id: uuid.UUID | None = None,
     user_id: uuid.UUID | None = None,
 ) -> Any:
-    return NotImplemented
+    raise NotImplementedError
