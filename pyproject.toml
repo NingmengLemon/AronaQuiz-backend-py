@@ -1,7 +1,7 @@
 [project]
-name = "hdusdp2-backend"
+name = "arona-quiz-backend"
 version = "0.1.0"
-description = "HDU Software Dev Practice 2: Backend"
+description = "backend of Arona Quiz written in Python"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -11,6 +11,8 @@ dependencies = [
     "sqlalchemy[aiosqlite,asyncio,postgresql-asyncpg]>=2.0.43",
     "sqlmodel>=0.0.24",
 ]
+classifiers = ["Private :: Do Not Upload"]
+
 
 [dependency-groups]
 dev = [
