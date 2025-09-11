@@ -1,8 +1,14 @@
-# Arona Quiz - Backend
 
-Arona Quiz
+<h1 align="center">
+  <a href="#arona-quiz---backend">
+    <img src="images/arona_quiz_logo.png" width="150" height="150" alt="banner" /><br>
+  </a>
+  <em>Arona Quiz</em>
+</h1>
 
-(Backend, written in Python)
+(Backend part, written in Python)
+
+> Dev not finished yet, plz wait...
 
 ## Deploy
 
