@@ -1,6 +1,6 @@
 
 <h1 align="center">
-    <img src="images/arona_quiz_logo.png" width="150" height="150" alt="banner" /><br>
+    <img src="images/arona_quiz_logo_rounded.png" width="150" height="150" alt="logo" /><br>
     <em>Arona Quiz</em>
 </h1>
 
