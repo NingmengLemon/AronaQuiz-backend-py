@@ -1,9 +1,7 @@
 
 <h1 align="center">
-  <a href="#arona-quiz---backend">
     <img src="images/arona_quiz_logo.png" width="150" height="150" alt="banner" /><br>
-  </a>
-  <em>Arona Quiz</em>
+    <em>Arona Quiz</em>
 </h1>
 
 (Backend part, written in Python)
