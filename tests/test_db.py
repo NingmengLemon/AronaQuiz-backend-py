@@ -30,7 +30,6 @@ from app.db.operations import (
     delete_problems,
     delete_problemset,
     ensure_record,
-    ensure_user,
     get_problem_count,
     list_problemset,
     query_problem,
@@ -43,7 +42,7 @@ from app.schemas.request import OptionSubmit, ProblemSubmit
 
 dotenv.load_dotenv()
 
-DB_NAME = "hdusdp2_test_dbopts"
+DB_NAME = "test_dbopts"
 
 
 @pytest.fixture(scope="module")
@@ -502,16 +501,6 @@ async def test_user_operations(init_database: AsyncDatabaseCore) -> None:
         # 测试查询不存在的用户
         non_existent_user = await query_user(session, username="nonexistent")
         assert non_existent_user is None
-
-        # 测试 ensure_user - 用户已存在
-        ensured_user = await ensure_user(session, "testuser1")
-        assert ensured_user.id == user1.id
-
-        # 测试 ensure_user - 用户不存在，应该创建新用户
-        new_user = await ensure_user(session, "testuser2")
-        await session.commit()
-        assert new_user.username == "testuser2"
-        assert new_user.id != user1.id
 
 
 async def test_answer_record_operations(
@@ -1121,54 +1110,6 @@ async def test_database_integrity_and_relationships(
             await session.exec(select(DBOption).where(col(DBOption.id).in_(option_ids)))
         ).all()
         assert len(remaining_options) == 0
-
-
-async def test_search_with_user_statistics(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
-) -> None:
-    """测试带用户统计的搜索功能"""
-
-    async with init_database.get_session() as session:
-        # 创建用户
-        user = await create_user(session, "test_stat_user")
-
-        # 添加问题
-        problem_ids = await add_problems(
-            session,
-            init_problemset_uuid,
-            ProblemSubmit(
-                content="统计测试问题1",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案")],
-            ),
-            ProblemSubmit(
-                content="统计测试问题2",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案")],
-            ),
-        )
-        assert problem_ids is not None
-
-        # 记录一些答题尝试
-        await report_attempt(session, problem_ids[0], user.id, correct=True)
-        await report_attempt(session, problem_ids[0], user.id, correct=False)
-        await report_attempt(session, problem_ids[0], user.id, correct=True)
-
-        await report_attempt(session, problem_ids[1], user.id, correct=False)
-        await report_attempt(session, problem_ids[1], user.id, correct=False)
-
-        # 测试带用户统计的搜索
-        search_results = await search_problem(session, "统计测试", user_id=user.id)
-        assert len(search_results) == 2
-
-        # 验证统计信息
-        for result in search_results:
-            if result.id == problem_ids[0]:
-                assert result.correct_count == 2
-                assert result.total_count == 3
-            elif result.id == problem_ids[1]:
-                assert result.correct_count == 0
-                assert result.total_count == 2
 
 
 async def test_problem_sampling_variations(

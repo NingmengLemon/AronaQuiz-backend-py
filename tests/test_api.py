@@ -12,7 +12,7 @@ from app.db.operations import create_problemset, create_user, delete_all
 from app.main import app
 
 # 测试数据库配置
-TEST_DB_NAME = "hdusdp2_test_apis"
+TEST_DB_NAME = "test_apis"
 
 
 @pytest.fixture(scope="module")
@@ -289,48 +289,7 @@ class TestProblemAPI:
         problem_id = add_response.json()[0]
 
         # 删除问题
-        response = client.post("/api/v1/problem/delete", json={"ids": [problem_id]})
-        assert response.status_code == 200
-        assert response.json() == "ok"
-
-        # 验证问题已被删除
-        count_response = client.get(
-            f"/api/v1/problem/count?problemset_id={problemset_id}"
-        )
-        assert count_response.json() == 0
-
-    async def test_delete_all_problems(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
-    ) -> None:
-        """测试删除所有问题"""
-        problemset_id, _ = setup_test_data
-
-        # 添加一些问题
-        client.post(
-            "/api/v1/problem/add",
-            json={
-                "problems": [
-                    {
-                        "content": "问题1",
-                        "type": "single_select",
-                        "options": [
-                            {"content": "答案1", "order": 0, "is_correct": True}
-                        ],
-                    },
-                    {
-                        "content": "问题2",
-                        "type": "single_select",
-                        "options": [
-                            {"content": "答案2", "order": 0, "is_correct": True}
-                        ],
-                    },
-                ],
-                "problemset_id": str(problemset_id),
-            },
-        )
-
-        # 删除所有问题
-        response = client.post("/api/v1/problem/_delete_all")
+        response = client.post("/api/v1/problem/delete", json=[problem_id])
         assert response.status_code == 200
         assert response.json() == "ok"
 
@@ -405,46 +364,25 @@ class TestSheetAPI:
         problem_id = add_response.json()[0]
 
         # 报告答题尝试（正确）
-        response = client.get(
-            f"/api/v1/sheet/report?problem_id={problem_id}&correct=true&user_id={user_id}"
+        response = client.post(
+            "/api/v1/sheet/report",
+            json={
+                "problem_id": str(problem_id),
+                "correct": True,
+                "user_id": str(user_id),
+            },
         )
         assert response.status_code == 200
         assert response.json() == "ok"
 
         # 报告答题尝试（错误）
-        response = client.get(
-            f"/api/v1/sheet/report?problem_id={problem_id}&correct=false&user_id={user_id}"
-        )
-        assert response.status_code == 200
-        assert response.json() == "ok"
-
-    async def test_report_attempt_anonymous(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
-    ) -> None:
-        """测试匿名用户答题报告"""
-        problemset_id, _ = setup_test_data
-
-        # 添加问题
-        add_response = client.post(
-            "/api/v1/problem/add",
+        response = client.post(
+            "/api/v1/sheet/report",
             json={
-                "problems": [
-                    {
-                        "content": "匿名答题测试",
-                        "type": "single_select",
-                        "options": [
-                            {"content": "答案", "order": 0, "is_correct": True}
-                        ],
-                    }
-                ],
-                "problemset_id": str(problemset_id),
+                "problem_id": str(problem_id),
+                "correct": False,
+                "user_id": str(user_id),
             },
-        )
-        problem_id = add_response.json()[0]
-
-        # 匿名用户答题
-        response = client.get(
-            f"/api/v1/sheet/report?problem_id={problem_id}&correct=true"
         )
         assert response.status_code == 200
         assert response.json() == "ok"
@@ -456,8 +394,13 @@ class TestSheetAPI:
         _, user_id = setup_test_data
         nonexistent_id = "12345678-1234-1234-1234-123456789012"
 
-        response = client.get(
-            f"/api/v1/sheet/report?problem_id={nonexistent_id}&correct=true&user_id={user_id}"
+        response = client.post(
+            "/api/v1/sheet/report",
+            json={
+                "problem_id": str(nonexistent_id),
+                "correct": True,
+                "user_id": str(user_id),
+            },
         )
         assert response.status_code == 404
 
@@ -486,7 +429,12 @@ class TestSheetAPI:
         problem_id = add_response.json()[0]
 
         nonexistent_user_id = "12345678-1234-1234-1234-123456789012"
-        response = client.get(
-            f"/api/v1/sheet/report?problem_id={problem_id}&correct=true&user_id={nonexistent_user_id}"
+        response = client.post(
+            "/api/v1/sheet/report",
+            json={
+                "problem_id": str(problem_id),
+                "correct": True,
+                "user_id": str(nonexistent_user_id),
+            },
         )
         assert response.status_code == 404

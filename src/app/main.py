@@ -10,7 +10,7 @@ from .api.deps import set_session_getter
 from .db.core import AsyncDatabaseCore
 from .db.models import TABLES
 
-DB_NAME = "hdusdp2"
+DB_NAME = "arona_quiz"
 
 
 @asynccontextmanager

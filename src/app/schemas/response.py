@@ -16,7 +16,7 @@ class OptionResponse(BaseOption):
     id: uuid.UUID
 
 
-class ProblemResponse(BaseProblem, BaseStatistic):
+class ProblemResponse(BaseProblem):
     id: uuid.UUID
     options: list[OptionResponse]
 

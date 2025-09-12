@@ -9,14 +9,12 @@ from app.db.decos import in_session, in_transaction
 from app.db.operations import (
     add_problems,
     create_problemset,
-    delete_all,
     delete_problems,
     get_problem_count,
     list_problemset,
     search_problem,
 )
 from app.schemas.request import (
-    DeleteProblemSubmit,
     ProblemSetSubmit,
     ProblemSubmit,
 )
@@ -71,9 +69,7 @@ async def add(
 @router.get(
     "/search",
     summary="搜索题目",
-    description="""每道题目额外带有给定用户 ID 的答题正确情况统计 (通过 /sheet/report 上报), 留空时为 anonymous 共享用户
-
-kw 可传入空字符串或留空, 此时不进行关键词筛选
+    description="""kw 可传入空字符串或留空, 此时不进行关键词筛选
 
 page_size 可填 0 表示不进行分页, 此时 page 被视为 1""",
 )
@@ -85,7 +81,6 @@ async def search(
     problemset_id: uuid.UUID | None = Query(None),
     page: int = Query(1),
     page_size: int = Query(20),
-    user_id: uuid.UUID | None = Query(None),
 ) -> list[ProblemResponse]:
     return await search_problem(
         session,
@@ -93,16 +88,13 @@ async def search(
         problemset_id=problemset_id,
         page=page,
         page_size=page_size,
-        user_id=user_id,
     )
 
 
 @router.get(
     "/get",
     summary="获取题目",
-    description="""每道题目额外带有给定用户 ID 的答题正确情况统计 (通过 /sheet/report 上报), 留空时为 anonymous 共享用户
-
-等价于 kw 字段留空的 /problem/search 接口
+    description="""等价于 kw 字段留空的 /problem/search 接口
 
 page_size 可填 0 表示不进行分页, 此时 page 被视为 1""",
 )
@@ -113,7 +105,6 @@ async def get_problems(
     problemset_id: uuid.UUID | None = Query(None),
     page: int = Query(1),
     page_size: int = Query(20),
-    user_id: uuid.UUID | None = Query(None),
 ) -> list[ProblemResponse]:
     return await search_problem(
         session,
@@ -121,12 +112,11 @@ async def get_problems(
         problemset_id=problemset_id,
         page=page,
         page_size=page_size,
-        user_id=user_id,
     )
 
 
 @router.get(
-    "/count", summary="获取题目数量", description="习题集 ID 留空则返回库中题目总数"
+    "/count", summary="获取题目数量", description="习题集 ID 留空时返回库中题目总数"
 )
 @in_session
 @in_transaction()
@@ -140,23 +130,6 @@ async def get_count(
 @router.post("/delete", summary="删除题目")
 @in_session
 @in_transaction()
-async def delete(
-    session: DbSessionDep, problems: DeleteProblemSubmit = Body()
-) -> Literal["ok"]:
-    if len(problems.ids) == 0:
-        raise HTTPException(400, "需要填写将要删除的ID")
-    await delete_problems(session, *problems.ids)
-    return "ok"
-
-
-@router.post(
-    "/_delete_all",
-    summary="删除全部题目",
-    description="**仅供调试**",
-    deprecated=True,
-)
-@in_session
-@in_transaction()
-async def delete_all_problemsets(session: DbSessionDep) -> Literal["ok"]:
-    await delete_all(session)
+async def delete(session: DbSessionDep, problems: list[uuid.UUID]) -> Literal["ok"]:
+    await delete_problems(session, *problems)
     return "ok"

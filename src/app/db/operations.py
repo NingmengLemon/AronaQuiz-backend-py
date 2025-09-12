@@ -1,11 +1,10 @@
 import datetime
 import logging
 import uuid
-from enum import Enum
 from typing import Any, ParamSpec, TypeVar, cast, overload
 
 from sqlalchemy.orm import QueryableAttribute, selectinload
-from sqlmodel import and_, col, delete, func, or_, select
+from sqlmodel import col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.decos import in_transaction
@@ -21,12 +20,6 @@ from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser
 logger = logging.getLogger("uvicorn.error")
 T = TypeVar("T")
 P = ParamSpec("P")
-
-DEFAULT_USERNAME = "anonymous"
-
-
-class VoidType(Enum):
-    VOID = type("_VOID", (), {})
 
 
 def queryable(o: T) -> QueryableAttribute[T]:
@@ -105,13 +98,8 @@ async def search_problem(
     problemset_id: uuid.UUID | None = None,
     page: int = 1,
     page_size: int = 20,
-    user_id: uuid.UUID | None | VoidType = VoidType.VOID,
 ) -> list[ProblemResponse]:
-    stmt = select(
-        DBProblem,
-        func.coalesce(DBAnswerRecord.correct_count, 0).label("correct_count"),
-        func.coalesce(DBAnswerRecord.total_count, 0).label("total_count"),
-    )
+    stmt = select(DBProblem)
     if problemset_id:
         stmt = stmt.where(DBProblem.problemset_id == problemset_id)
     if kw:
@@ -125,20 +113,6 @@ async def search_problem(
             )
             .distinct()
         )
-    stmt = stmt.outerjoin(
-        DBAnswerRecord,
-        and_(
-            (DBAnswerRecord.problem_id == DBProblem.id),
-            (
-                DBAnswerRecord.user_id
-                == (
-                    user_id
-                    if isinstance(user_id, uuid.UUID)
-                    else (await ensure_user(session, DEFAULT_USERNAME)).id
-                )
-            ),
-        ),
-    )
     page = max(1, page)
     page_size = max(0, page_size)
     if page_size != 0:
@@ -147,10 +121,8 @@ async def search_problem(
         await session.exec(stmt.options(selectinload(queryable(DBProblem.options))))
     ).all()
     result: list[ProblemResponse] = []
-    for p, c, t in db_problems:
+    for p in db_problems:
         result.append(ProblemResponse.model_validate(p, from_attributes=True))
-        result[-1].correct_count = c
-        result[-1].total_count = t
 
     return result
 
@@ -261,12 +233,6 @@ async def create_user(session: AsyncSession, username: str) -> DBUser:
     return user
 
 
-async def ensure_user(session: AsyncSession, username: str) -> DBUser:
-    if (user := await query_user(session, username=username)) is None:
-        user = await create_user(session, username)
-    return user
-
-
 @in_transaction()
 async def create_record(
     session: AsyncSession, user_id: uuid.UUID, problem_id: uuid.UUID
@@ -305,9 +271,6 @@ async def report_attempt(
     correct: bool,
     time: datetime.datetime | None = None,
 ) -> None:
-    problem = await query_problem(session, problem_id)
-    if problem is None:
-        raise ValueError("no problem found")
     record = await ensure_record(session, user_id, problem_id)
     record.total_count += 1
     if correct:
