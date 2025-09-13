@@ -2,17 +2,14 @@ import asyncio
 import functools
 from collections.abc import AsyncGenerator
 from types import TracebackType
-from typing import Callable, Concatenate, ParamSpec, Self, TypeVar
+from typing import Callable, Concatenate, Self
 
 from sqlalchemy.ext.asyncio.engine import create_async_engine
 from sqlalchemy.schema import Table
 from sqlmodel import Session, SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.typ import AsyncCallable
-
-P = ParamSpec("P")
-T = TypeVar("T")
+from app.typ import AsyncCallable, P, T
 
 
 class AsyncDatabaseCore:

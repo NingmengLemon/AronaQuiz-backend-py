@@ -1,7 +1,7 @@
 import datetime
 import logging
 import uuid
-from typing import Any, ParamSpec, TypeVar, cast, overload
+from typing import Any, cast, overload
 
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import col, delete, func, or_, select
@@ -14,12 +14,11 @@ from app.schemas.response import (
     ProblemSetCreateStatus,
     ProblemSetResponse,
 )
+from app.typ import T
 
 from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser
 
 logger = logging.getLogger("uvicorn.error")
-T = TypeVar("T")
-P = ParamSpec("P")
 
 
 def queryable(o: T) -> QueryableAttribute[T]:
@@ -113,10 +112,7 @@ async def search_problem(
             )
             .distinct()
         )
-    page = max(1, page)
-    page_size = max(0, page_size)
-    if page_size != 0:
-        stmt = stmt.offset(page_size * (page - 1)).limit(page_size)
+    stmt = stmt.offset(page_size * (page - 1)).limit(page_size)
     db_problems = (
         await session.exec(stmt.options(selectinload(queryable(DBProblem.options))))
     ).all()

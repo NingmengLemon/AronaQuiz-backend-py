@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Awaitable, ParamSpec, Protocol, TypeVar
 
 P = ParamSpec("P")
+T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
 
 

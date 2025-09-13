@@ -1,13 +1,13 @@
 import datetime
 import uuid
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Awaitable, Generic, TypeVar
+from typing import TYPE_CHECKING, Awaitable, Generic
 
 from sqlalchemy import PrimaryKeyConstraint
 from sqlalchemy.ext.asyncio.session import AsyncAttrs as _AsyncAttrs
 from sqlmodel import Field, Relationship, SQLModel
 
-T = TypeVar("T")
+from app.typ import T
 
 __all__ = ["DBOption", "DBProblem", "ProblemType"]
 

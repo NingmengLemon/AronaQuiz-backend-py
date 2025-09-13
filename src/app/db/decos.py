@@ -1,16 +1,12 @@
 import functools
 from collections.abc import Awaitable, Callable
-from typing import Concatenate, ParamSpec, Protocol, TypeVar
+from typing import Concatenate, Protocol
 
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.utils import auto_begin
-from app.typ import AsyncCallable
-
-T = TypeVar("T")
-T_co = TypeVar("T_co", covariant=True)
-P = ParamSpec("P")
+from app.typ import AsyncCallable, P, T, T_co
 
 
 def in_session(
