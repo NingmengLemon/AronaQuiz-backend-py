@@ -12,6 +12,7 @@ from app.db.operations import (
     delete_problems,
     get_problem_count,
     list_problemset,
+    sample,
     search_problem,
 )
 from app.schemas.request import (
@@ -69,9 +70,7 @@ async def add(
 @router.get(
     "/search",
     summary="搜索题目",
-    description="""kw 可传入空字符串或留空, 此时不进行关键词筛选
-
-page_size 可填 0 表示不进行分页, 此时 page 被视为 1""",
+    description="""kw 可留空, 此时不进行关键词筛选""",
 )
 @in_session
 @in_transaction()
@@ -79,39 +78,37 @@ async def search(
     session: DbSessionDep,
     kw: str = Query(""),
     problemset_id: uuid.UUID | None = Query(None),
-    page: int = Query(1),
-    page_size: int = Query(20),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1),
 ) -> list[ProblemResponse]:
     return await search_problem(
         session,
         kw.strip() or None,
         problemset_id=problemset_id,
-        page=page,
-        page_size=page_size,
+        page=max(page, 1),
+        page_size=max(page_size, 1),
     )
 
 
 @router.get(
     "/get",
     summary="获取题目",
-    description="""等价于 kw 字段留空的 /problem/search 接口
-
-page_size 可填 0 表示不进行分页, 此时 page 被视为 1""",
+    description="""等价于 kw 字段留空的 /problem/search 接口""",
 )
 @in_session
 @in_transaction()
 async def get_problems(
     session: DbSessionDep,
     problemset_id: uuid.UUID | None = Query(None),
-    page: int = Query(1),
-    page_size: int = Query(20),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1),
 ) -> list[ProblemResponse]:
     return await search_problem(
         session,
         None,
         problemset_id=problemset_id,
-        page=page,
-        page_size=page_size,
+        page=max(page, 1),
+        page_size=max(page_size, 1),
     )
 
 
@@ -133,3 +130,12 @@ async def get_count(
 async def delete(session: DbSessionDep, problems: list[uuid.UUID]) -> Literal["ok"]:
     await delete_problems(session, *problems)
     return "ok"
+
+
+@router.get("/random", summary="随机抽取题目")
+@in_session
+@in_transaction()
+async def random(
+    session: DbSessionDep, problemset_id: uuid.UUID = Query(), n: int = Query(20)
+) -> list[ProblemSubmit]:
+    return await sample(session, problemset_id=problemset_id, n=n)

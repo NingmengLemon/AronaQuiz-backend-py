@@ -948,7 +948,7 @@ async def test_performance_and_bulk_operations(
 
         # 测试批量搜索性能
         start_time = time.time()
-        search_results = await search_problem(session, "性能测试", page_size=0)
+        search_results = await search_problem(session, "性能测试", page_size=999)
         search_time = time.time() - start_time
 
         print(f"搜索100个问题耗时: {search_time:.3f}秒")

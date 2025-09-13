@@ -334,7 +334,9 @@ class TestSheetAPI:
         )
 
         # 获取随机问题
-        response = client.get(f"/api/v1/sheet/random?problemset_id={problemset_id}&n=2")
+        response = client.get(
+            f"/api/v1/problem/random?problemset_id={problemset_id}&n=2"
+        )
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
@@ -365,7 +367,7 @@ class TestSheetAPI:
 
         # 报告答题尝试（正确）
         response = client.post(
-            "/api/v1/sheet/report",
+            "/api/v1/stat/report",
             json={
                 "problem_id": str(problem_id),
                 "correct": True,
@@ -377,7 +379,7 @@ class TestSheetAPI:
 
         # 报告答题尝试（错误）
         response = client.post(
-            "/api/v1/sheet/report",
+            "/api/v1/stat/report",
             json={
                 "problem_id": str(problem_id),
                 "correct": False,
@@ -395,7 +397,7 @@ class TestSheetAPI:
         nonexistent_id = "12345678-1234-1234-1234-123456789012"
 
         response = client.post(
-            "/api/v1/sheet/report",
+            "/api/v1/stat/report",
             json={
                 "problem_id": str(nonexistent_id),
                 "correct": True,
@@ -430,7 +432,7 @@ class TestSheetAPI:
 
         nonexistent_user_id = "12345678-1234-1234-1234-123456789012"
         response = client.post(
-            "/api/v1/sheet/report",
+            "/api/v1/stat/report",
             json={
                 "problem_id": str(problem_id),
                 "correct": True,

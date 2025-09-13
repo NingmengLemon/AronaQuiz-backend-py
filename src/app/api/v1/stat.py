@@ -2,25 +2,15 @@ import datetime
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException
 
 from app.api.deps import DbSessionDep
 from app.db.decos import in_session, in_transaction
 from app.db.models import DBUser
-from app.db.operations import query_problem, query_user, sample
+from app.db.operations import query_problem, query_user
 from app.db.operations import report_attempt as report_attempt_db
-from app.schemas.request import ProblemSubmit
 
-router = APIRouter(tags=["sheet"])
-
-
-@router.get("/random", summary="随机抽取题目")
-@in_session
-@in_transaction()
-async def random(
-    session: DbSessionDep, problemset_id: uuid.UUID = Query(), n: int = Query(20)
-) -> list[ProblemSubmit]:
-    return await sample(session, problemset_id=problemset_id, n=n)
+router = APIRouter(tags=["stat"])
 
 
 @router.post(
