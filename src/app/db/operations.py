@@ -1,7 +1,7 @@
 import datetime
 import logging
-import uuid
 from typing import Any, cast, overload
+from uuid import UUID
 
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import col, delete, func, or_, select
@@ -28,7 +28,7 @@ def queryable(o: T) -> QueryableAttribute[T]:
 @in_transaction()
 async def create_problemset(
     session: AsyncSession, name: str
-) -> tuple[uuid.UUID, ProblemSetCreateStatus]:
+) -> tuple[UUID, ProblemSetCreateStatus]:
     name = name.strip()
     problemset = (
         await session.exec(select(DBProblemSet).where(DBProblemSet.name == name))
@@ -43,14 +43,14 @@ async def create_problemset(
 
 @in_transaction()
 async def add_problems(
-    session: AsyncSession, problemset_id: uuid.UUID, *problems: ProblemSubmit
-) -> list[uuid.UUID] | None:
+    session: AsyncSession, problemset_id: UUID, *problems: ProblemSubmit
+) -> list[UUID] | None:
     problemset = (
         await session.exec(select(DBProblemSet).where(DBProblemSet.id == problemset_id))
     ).one_or_none()
     if problemset is None:
         return None
-    added_ids: list[uuid.UUID] = []
+    added_ids: list[UUID] = []
     for problem in problems:
         problem_db = DBProblem.model_validate(
             problem,
@@ -58,7 +58,6 @@ async def add_problems(
                 "options": [],
                 "problemset_id": problemset.id,
                 "problemset": problemset,
-                "id": uuid.uuid4(),
             },
         )
         problem_id = problem_db.id
@@ -74,7 +73,7 @@ async def add_problems(
 
 
 async def query_problem(
-    session: AsyncSession, problem_id: uuid.UUID
+    session: AsyncSession, problem_id: UUID
 ) -> ProblemResponse | None:
     """not public"""
     problem_db = (
@@ -94,7 +93,7 @@ async def query_problem(
 async def search_problem(
     session: AsyncSession,
     kw: str | None = None,
-    problemset_id: uuid.UUID | None = None,
+    problemset_id: UUID | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> list[ProblemResponse]:
@@ -126,7 +125,7 @@ async def search_problem(
 @in_transaction()
 async def delete_problems(
     session: AsyncSession,
-    *problem_ids: uuid.UUID,
+    *problem_ids: UUID,
 ) -> None:
     stmt = delete(DBProblem)
     stmt = stmt.where(col(DBProblem.id).in_(problem_ids))
@@ -137,9 +136,7 @@ async def delete_problems(
 
 
 @in_transaction()
-async def delete_problemset(
-    session: AsyncSession, problemset_id: uuid.UUID
-) -> None | uuid.UUID:
+async def delete_problemset(session: AsyncSession, problemset_id: UUID) -> None | UUID:
     problemset = (
         await session.exec(select(DBProblemSet).where(DBProblemSet.id == problemset_id))
     ).one_or_none()
@@ -153,7 +150,7 @@ async def delete_problemset(
 
 
 async def get_problem_count(
-    session: AsyncSession, problemset_id: uuid.UUID | None = None
+    session: AsyncSession, problemset_id: UUID | None = None
 ) -> int:
     stmt = select(func.count())
     if problemset_id:
@@ -162,7 +159,7 @@ async def get_problem_count(
 
 
 async def sample(
-    session: AsyncSession, problemset_id: uuid.UUID, n: int = 20
+    session: AsyncSession, problemset_id: UUID, n: int = 20
 ) -> list[ProblemSubmit]:
     db_problems = await session.exec(
         select(DBProblem)
@@ -202,14 +199,14 @@ async def query_user(session: AsyncSession, *, username: str) -> DBUser | None: 
 
 
 @overload
-async def query_user(session: AsyncSession, *, user_id: uuid.UUID) -> DBUser | None: ...
+async def query_user(session: AsyncSession, *, user_id: UUID) -> DBUser | None: ...
 
 
 async def query_user(
     session: AsyncSession,
     *,
     username: str | None = None,
-    user_id: uuid.UUID | None = None,
+    user_id: UUID | None = None,
 ) -> DBUser | None:
     if not ((username is None) ^ (user_id is None)):
         raise ValueError("choose from username and user_id")
@@ -224,14 +221,12 @@ async def query_user(
 
 @in_transaction()
 async def create_user(session: AsyncSession, username: str) -> DBUser:
-    user = DBUser(username=username)
-    session.add(user)
-    return user
+    raise NotImplementedError
 
 
 @in_transaction()
 async def create_record(
-    session: AsyncSession, user_id: uuid.UUID, problem_id: uuid.UUID
+    session: AsyncSession, user_id: UUID, problem_id: UUID
 ) -> DBAnswerRecord:
     record = DBAnswerRecord(user_id=user_id, problem_id=problem_id)
     session.add(record)
@@ -239,7 +234,7 @@ async def create_record(
 
 
 async def ensure_record(
-    session: AsyncSession, user_id: uuid.UUID, problem_id: uuid.UUID
+    session: AsyncSession, user_id: UUID, problem_id: UUID
 ) -> DBAnswerRecord:
     if (
         record := (
@@ -262,8 +257,8 @@ async def ensure_record(
 @in_transaction()
 async def report_attempt(
     session: AsyncSession,
-    problem_id: uuid.UUID,
-    user_id: uuid.UUID,
+    problem_id: UUID,
+    user_id: UUID,
     correct: bool,
     time: datetime.datetime | None = None,
 ) -> None:
@@ -278,7 +273,7 @@ async def report_attempt(
 async def query_statistic(
     session: AsyncSession,
     *,
-    problem_id: uuid.UUID | None = None,
-    user_id: uuid.UUID | None = None,
+    problem_id: UUID | None = None,
+    user_id: UUID | None = None,
 ) -> Any:
     raise NotImplementedError

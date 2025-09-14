@@ -1,6 +1,6 @@
 import logging
-import uuid
 from typing import Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Body, HTTPException, Query
 
@@ -55,8 +55,8 @@ async def list_set(session: DbSessionDep) -> list[ProblemSetResponse]:
 async def add(
     session: DbSessionDep,
     problems: list[ProblemSubmit] = Body(),
-    problemset_id: uuid.UUID = Body(),
-) -> list[uuid.UUID]:
+    problemset_id: UUID = Body(),
+) -> list[UUID]:
     result = await add_problems(
         session,
         problemset_id,
@@ -77,7 +77,7 @@ async def add(
 async def search(
     session: DbSessionDep,
     kw: str = Query(""),
-    problemset_id: uuid.UUID | None = Query(None),
+    problemset_id: UUID | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1),
 ) -> list[ProblemResponse]:
@@ -99,7 +99,7 @@ async def search(
 @in_transaction()
 async def get_problems(
     session: DbSessionDep,
-    problemset_id: uuid.UUID | None = Query(None),
+    problemset_id: UUID | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1),
 ) -> list[ProblemResponse]:
@@ -119,7 +119,7 @@ async def get_problems(
 @in_transaction()
 async def get_count(
     session: DbSessionDep,
-    problemset_id: uuid.UUID | None = Query(None),
+    problemset_id: UUID | None = Query(None),
 ) -> int:
     return await get_problem_count(session, problemset_id)
 
@@ -127,7 +127,7 @@ async def get_count(
 @router.post("/delete", summary="删除题目")
 @in_session
 @in_transaction()
-async def delete(session: DbSessionDep, problems: list[uuid.UUID]) -> Literal["ok"]:
+async def delete(session: DbSessionDep, problems: list[UUID]) -> Literal["ok"]:
     await delete_problems(session, *problems)
     return "ok"
 
@@ -136,6 +136,6 @@ async def delete(session: DbSessionDep, problems: list[uuid.UUID]) -> Literal["o
 @in_session
 @in_transaction()
 async def random(
-    session: DbSessionDep, problemset_id: uuid.UUID = Query(), n: int = Query(20)
+    session: DbSessionDep, problemset_id: UUID = Query(), n: int = Query(20)
 ) -> list[ProblemSubmit]:
     return await sample(session, problemset_id=problemset_id, n=n)

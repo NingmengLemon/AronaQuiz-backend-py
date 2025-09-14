@@ -1,5 +1,5 @@
-import uuid
 from enum import StrEnum, auto
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -13,26 +13,26 @@ from ._base import (
 
 
 class OptionResponse(BaseOption):
-    id: uuid.UUID
+    id: UUID
 
 
 class ProblemResponse(BaseProblem):
-    id: uuid.UUID
+    id: UUID
     options: list[OptionResponse]
 
 
 class UserResponse(BaseUser):
-    id: uuid.UUID
+    id: UUID
 
 
 class ProblemSetResponse(BaseProblemSet):
     count: int
-    id: uuid.UUID
+    id: UUID
 
 
 class SingleUserStatResponse(BaseStatistic):
-    problem_id: uuid.UUID
-    user_id: uuid.UUID
+    problem_id: UUID
+    user_id: UUID
 
 
 class UserStatResponse(BaseUser):
@@ -45,5 +45,5 @@ class ProblemSetCreateStatus(StrEnum):
 
 
 class CreateProblemSetResponse(BaseModel):
-    id: uuid.UUID
+    id: UUID
     status: ProblemSetCreateStatus

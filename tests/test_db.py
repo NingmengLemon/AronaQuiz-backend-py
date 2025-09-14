@@ -3,8 +3,8 @@ import datetime
 import json
 import os
 import time
-import uuid
 from typing import AsyncGenerator
+from uuid import UUID, uuid4
 
 import dotenv
 import pytest
@@ -67,7 +67,7 @@ async def init_database() -> AsyncGenerator[AsyncDatabaseCore, None]:
 @pytest.fixture(scope="function")
 async def init_problemset_uuid(
     init_database: AsyncDatabaseCore,
-) -> AsyncGenerator[uuid.UUID, None]:
+) -> AsyncGenerator[UUID, None]:
     async with init_database.get_session() as session:
         await delete_all(session)
         await session.exec(delete(DBUser))  # type: ignore
@@ -79,7 +79,7 @@ async def init_problemset_uuid(
 
 
 async def test_add(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     async with init_database.get_session() as session:
         await add_problems(
@@ -106,11 +106,10 @@ async def test_add(
         assert len(options) == 4
         assert options[0].is_correct == 1
         assert options[0].content == "2034324"
-        print(problem)
 
 
 async def test_multiadd(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     with open("data/example_data.csv", "r", encoding="utf-8", errors="replace") as fp:
         sheet = fp.readlines()
@@ -167,7 +166,7 @@ async def test_multiadd(
 
 
 async def test_query_problem(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试查询单个问题功能"""
     async with init_database.get_session() as session:
@@ -201,13 +200,13 @@ async def test_query_problem(
 
     async with init_database.get_session() as session:
         # 测试查询不存在的问题
-        non_existent_id = uuid.uuid4()
+        non_existent_id = uuid4()
         non_existent_problem = await query_problem(session, non_existent_id)
         assert non_existent_problem is None
 
 
 async def test_search_problem(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试搜索问题功能"""
     async with init_database.get_session() as session:
@@ -262,7 +261,7 @@ async def test_search_problem(
 
 
 async def test_delete_problems(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试删除问题功能"""
     async with init_database.get_session() as session:
@@ -313,7 +312,7 @@ async def test_delete_problems(
 
 
 async def test_sample_problems(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试随机抽样功能"""
     async with init_database.get_session() as session:
@@ -351,7 +350,7 @@ async def test_sample_problems(
 
 
 async def test_multi_select_problem(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试多选问题类型"""
     async with init_database.get_session() as session:
@@ -389,7 +388,7 @@ async def test_multi_select_problem(
 
 
 async def test_search_edge_cases(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试搜索边界情况"""
     async with init_database.get_session() as session:
@@ -420,7 +419,7 @@ async def test_search_edge_cases(
 
 
 async def test_problem_count(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试问题计数功能"""
     async with init_database.get_session() as session:
@@ -460,7 +459,7 @@ async def test_problem_count(
 
 
 async def test_problemset(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     async with init_database.get_session() as session:
         id_, status = await create_problemset(session, "test")
@@ -504,7 +503,7 @@ async def test_user_operations(init_database: AsyncDatabaseCore) -> None:
 
 
 async def test_answer_record_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试答题记录相关操作"""
 
@@ -562,7 +561,7 @@ async def test_answer_record_operations(
 
 
 async def test_advanced_search_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试高级搜索功能"""
     async with init_database.get_session() as session:
@@ -633,7 +632,7 @@ async def test_advanced_search_operations(
 
 
 async def test_concurrent_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试并发操作"""
 
@@ -668,7 +667,7 @@ async def test_concurrent_operations(
 
 
 async def test_data_validation_and_constraints(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试数据验证和约束"""
     async with init_database.get_session() as session:
@@ -776,7 +775,7 @@ async def test_edge_cases_and_error_handling(init_database: AsyncDatabaseCore) -
 
     async with init_database.get_session() as session:
         # 测试对不存在的问题集添加问题
-        fake_problemset_id = uuid.uuid4()
+        fake_problemset_id = uuid4()
         result = await add_problems(
             session,
             fake_problemset_id,
@@ -789,7 +788,7 @@ async def test_edge_cases_and_error_handling(init_database: AsyncDatabaseCore) -
         assert result is None  # 应该返回 None
 
         # 测试查询不存在的问题
-        fake_problem_id = uuid.uuid4()
+        fake_problem_id = uuid4()
         problem = await query_problem(session, fake_problem_id)
         assert problem is None
 
@@ -810,7 +809,7 @@ async def test_edge_cases_and_error_handling(init_database: AsyncDatabaseCore) -
 
 
 async def test_problem_types_and_options(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试不同问题类型和选项配置"""
     async with init_database.get_session() as session:
@@ -909,7 +908,7 @@ async def test_problem_types_and_options(
 
 
 async def test_performance_and_bulk_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试性能和批量操作"""
 
@@ -977,7 +976,7 @@ async def test_performance_and_bulk_operations(
 
 
 async def test_database_transactions_and_rollback(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试数据库事务和回滚"""
     test_username = "Ayachi Nene"
@@ -995,7 +994,7 @@ async def test_database_transactions_and_rollback(
 
 
 async def test_unicode_and_special_characters(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试Unicode和特殊字符处理"""
     async with init_database.get_session() as session:
@@ -1065,7 +1064,7 @@ async def test_unicode_and_special_characters(
 
 
 async def test_database_integrity_and_relationships(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试数据库完整性和关系约束"""
 
@@ -1113,7 +1112,7 @@ async def test_database_integrity_and_relationships(
 
 
 async def test_problem_sampling_variations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试问题抽样的各种情况"""
     async with init_database.get_session() as session:
@@ -1152,7 +1151,7 @@ async def test_problem_sampling_variations(
 
 
 async def test_complex_query_scenarios(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试复杂查询场景"""
     async with init_database.get_session() as session:
@@ -1228,7 +1227,7 @@ async def test_complex_query_scenarios(
 
 
 async def test_data_consistency_after_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: uuid.UUID
+    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
 ) -> None:
     """测试操作后的数据一致性"""
     async with init_database.get_session() as session:

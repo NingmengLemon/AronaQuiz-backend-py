@@ -1,6 +1,6 @@
 import datetime
-import uuid
 from typing import Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Body, HTTPException
 
@@ -22,8 +22,8 @@ router = APIRouter(tags=["stat"])
 @in_transaction()
 async def report_attempt(
     session: DbSessionDep,
-    user_id: uuid.UUID = Body(),
-    problem_id: uuid.UUID = Body(),
+    user_id: UUID = Body(),
+    problem_id: UUID = Body(),
     correct: bool = Body(),
     time: datetime.datetime | None = Body(None),
 ) -> Literal["ok"]:

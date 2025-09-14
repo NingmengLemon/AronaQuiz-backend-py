@@ -1,5 +1,5 @@
-import uuid
 from typing import AsyncGenerator
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -39,7 +39,7 @@ async def test_db() -> AsyncGenerator[AsyncDatabaseCore, None]:
 @pytest.fixture(scope="function")
 async def setup_test_data(
     test_db: AsyncDatabaseCore,
-) -> AsyncGenerator[tuple[uuid.UUID, uuid.UUID], None]:
+) -> AsyncGenerator[tuple[UUID, UUID], None]:
     """为每个测试准备数据"""
     async with test_db.get_session() as session:
         # 清理现有数据
@@ -117,7 +117,7 @@ class TestProblemAPI:
         assert any(ps["name"] == "题库2" for ps in data)
 
     async def test_add_problems(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
+        self, client: TestClient, setup_test_data: tuple[UUID, UUID]
     ) -> None:
         """测试添加问题"""
         problemset_id, _ = setup_test_data
@@ -172,7 +172,7 @@ class TestProblemAPI:
         assert response.status_code == 404
 
     async def test_search_problems(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
+        self, client: TestClient, setup_test_data: tuple[UUID, UUID]
     ) -> None:
         """测试搜索问题"""
         problemset_id, _ = setup_test_data
@@ -203,7 +203,7 @@ class TestProblemAPI:
         assert "Python" in data[0]["content"]
 
     async def test_get_problems(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
+        self, client: TestClient, setup_test_data: tuple[UUID, UUID]
     ) -> None:
         """测试获取问题列表"""
         problemset_id, _ = setup_test_data
@@ -233,7 +233,7 @@ class TestProblemAPI:
         assert data[0]["content"] == "测试问题"
 
     async def test_get_problem_count(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
+        self, client: TestClient, setup_test_data: tuple[UUID, UUID]
     ) -> None:
         """测试获取问题计数"""
         problemset_id, _ = setup_test_data
@@ -265,7 +265,7 @@ class TestProblemAPI:
         assert response.json() == 1
 
     async def test_delete_problems(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
+        self, client: TestClient, setup_test_data: tuple[UUID, UUID]
     ) -> None:
         """测试删除问题"""
         problemset_id, _ = setup_test_data
@@ -304,7 +304,7 @@ class TestSheetAPI:
     """测试答题表相关API"""
 
     async def test_get_random_problems(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
+        self, client: TestClient, setup_test_data: tuple[UUID, UUID]
     ) -> None:
         """测试获取随机问题"""
         problemset_id, _ = setup_test_data
@@ -342,7 +342,7 @@ class TestSheetAPI:
         assert len(data) == 2
 
     async def test_report_attempt(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
+        self, client: TestClient, setup_test_data: tuple[UUID, UUID]
     ) -> None:
         """测试报告答题尝试"""
         problemset_id, user_id = setup_test_data
@@ -390,7 +390,7 @@ class TestSheetAPI:
         assert response.json() == "ok"
 
     async def test_report_attempt_nonexistent_problem(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
+        self, client: TestClient, setup_test_data: tuple[UUID, UUID]
     ) -> None:
         """测试报告不存在的问题的答题尝试"""
         _, user_id = setup_test_data
@@ -407,7 +407,7 @@ class TestSheetAPI:
         assert response.status_code == 404
 
     async def test_report_attempt_nonexistent_user(
-        self, client: TestClient, setup_test_data: tuple[uuid.UUID, uuid.UUID]
+        self, client: TestClient, setup_test_data: tuple[UUID, UUID]
     ) -> None:
         """测试报告不存在的用户的答题尝试"""
         problemset_id, _ = setup_test_data
