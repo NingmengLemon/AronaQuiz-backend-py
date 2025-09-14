@@ -15,8 +15,9 @@ from app.schemas.response import (
     ProblemSetResponse,
 )
 from app.typ import T
+from app.utils.security import hash
 
-from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser
+from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser, UserRole
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -220,8 +221,24 @@ async def query_user(
 
 
 @in_transaction()
-async def create_user(session: AsyncSession, username: str) -> DBUser:
-    raise NotImplementedError
+async def create_user(
+    session: AsyncSession,
+    username: str,
+    email: str,
+    passwd: str,
+    nickname: str,
+    role: UserRole = UserRole.USER,
+) -> UUID:
+    hashed_passwd = await hash(passwd)
+    user = DBUser(
+        email=email,
+        username=username,
+        password_hash=hashed_passwd,
+        nickname=nickname,
+        role=role,
+    )
+    session.add(user)
+    return user.id
 
 
 @in_transaction()
@@ -233,9 +250,14 @@ async def create_record(
     return record
 
 
-async def ensure_record(
-    session: AsyncSession, user_id: UUID, problem_id: UUID
-) -> DBAnswerRecord:
+@in_transaction()
+async def report_attempt(
+    session: AsyncSession,
+    problem_id: UUID,
+    user_id: UUID,
+    correct: bool,
+    time: datetime.datetime | None = None,
+) -> None:
     if (
         record := (
             await session.exec(
@@ -251,18 +273,6 @@ async def ensure_record(
             user_id,
             problem_id,
         )
-    return record
-
-
-@in_transaction()
-async def report_attempt(
-    session: AsyncSession,
-    problem_id: UUID,
-    user_id: UUID,
-    correct: bool,
-    time: datetime.datetime | None = None,
-) -> None:
-    record = await ensure_record(session, user_id, problem_id)
     record.total_count += 1
     if correct:
         record.correct_count += 1

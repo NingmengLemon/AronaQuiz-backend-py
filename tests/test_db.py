@@ -10,6 +10,7 @@ import dotenv
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.core import AsyncDatabaseCore
 from app.db.models import (
@@ -29,7 +30,6 @@ from app.db.operations import (
     delete_all,
     delete_problems,
     delete_problemset,
-    ensure_record,
     get_problem_count,
     list_problemset,
     query_problem,
@@ -52,9 +52,7 @@ async def init_database() -> AsyncGenerator[AsyncDatabaseCore, None]:
     # host = os.getenv("DB_HOST")
     # port = int((os.getenv("DB_PORT") or 5432))
     # DATABASE_URL = f"postgresql+asyncpg://{username}:{password}@{host}:{port}/{dbname}"
-    if os.path.exists(f := f"data/{DB_NAME}.db"):
-        os.remove(f)
-    DATABASE_URL = f"sqlite+aiosqlite:///data/{DB_NAME}.db"
+    DATABASE_URL = "sqlite+aiosqlite://"
     db = AsyncDatabaseCore(
         DATABASE_URL,
         TABLES,
@@ -76,6 +74,16 @@ async def init_problemset_uuid(
         id_, _ = await create_problemset(session, "test")
         await session.commit()
     yield id_
+
+
+async def _create_user_simple(session: AsyncSession, username: str) -> UUID:
+    return await create_user(
+        session,
+        username,
+        email="email@example.com",
+        nickname=username,
+        passwd="114514",
+    )
 
 
 async def test_add(
@@ -481,19 +489,16 @@ async def test_user_operations(init_database: AsyncDatabaseCore) -> None:
 
     async with init_database.get_session() as session:
         # 测试创建用户
-        user1 = await create_user(session, "testuser1")
+        user1 = await _create_user_simple(session, "testuser1")
         await session.commit()
-        assert user1.username == "testuser1"
-        assert user1.id is not None
-
         # 测试查询用户（按用户名）
         queried_user = await query_user(session, username="testuser1")
         assert queried_user is not None
         assert queried_user.username == "testuser1"
-        assert queried_user.id == user1.id
+        assert queried_user.id == user1
 
         # 测试查询用户（按ID）
-        queried_user_by_id = await query_user(session, user_id=user1.id)
+        queried_user_by_id = await query_user(session, user_id=user1)
         assert queried_user_by_id is not None
         assert queried_user_by_id.username == "testuser1"
 
@@ -509,7 +514,7 @@ async def test_answer_record_operations(
 
     async with init_database.get_session() as session:
         # 创建用户和问题
-        user = await create_user(session, "test_student")
+        user = await _create_user_simple(session, "test_student")
         await session.commit()
 
         problem_ids = await add_problems(
@@ -529,35 +534,27 @@ async def test_answer_record_operations(
         await session.commit()
 
         # 测试创建答题记录
-        record = await create_record(session, user.id, problem_id)
+        record = await create_record(session, user, problem_id)
         await session.commit()
-        assert record.user_id == user.id
+        assert record.user_id == user
         assert record.problem_id == problem_id
         assert record.correct_count == 0
         assert record.total_count == 0
 
-        # 测试 ensure_record - 记录已存在
-        ensured_record = await ensure_record(session, user.id, problem_id)
-        assert ensured_record.user_id == record.user_id
-        assert ensured_record.problem_id == record.problem_id
-
         # 测试报告答题尝试（正确）
         test_time = datetime.datetime.now()
-        await report_attempt(session, problem_id, user.id, correct=True, time=test_time)
-        await session.commit()
+        await report_attempt(session, problem_id, user, correct=True, time=test_time)
 
         # 验证记录更新
-        updated_user = await query_user(session, user_id=user.id)
+        updated_user = await query_user(session, user_id=user)
         assert updated_user is not None
 
         # 测试报告答题尝试（错误）
-        await report_attempt(session, problem_id, user.id, correct=False)
-        await session.commit()
+        await report_attempt(session, problem_id, user, correct=False)
 
         # 测试多次答题
         for i in range(5):
-            await report_attempt(session, problem_id, user.id, correct=i % 2 == 0)
-        await session.commit()
+            await report_attempt(session, problem_id, user, correct=i % 2 == 0)
 
 
 async def test_advanced_search_operations(
@@ -982,9 +979,9 @@ async def test_database_transactions_and_rollback(
     test_username = "Ayachi Nene"
     async with init_database.get_session() as session:
         with pytest.raises(IntegrityError):
-            await create_user(session, test_username)
+            await _create_user_simple(session, test_username)
             # 预期出现用户重名错误
-            await create_user(session, test_username)
+            await _create_user_simple(session, test_username)
 
         users = (
             await session.exec(select(DBUser).where(DBUser.username == test_username))

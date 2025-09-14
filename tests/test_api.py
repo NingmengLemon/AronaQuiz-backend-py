@@ -17,14 +17,7 @@ TEST_DB_NAME = "test_apis"
 
 @pytest.fixture(scope="module")
 async def test_db() -> AsyncGenerator[AsyncDatabaseCore, None]:
-    """创建测试数据库"""
-    import os
-
-    if os.path.exists(f := f"data/{TEST_DB_NAME}.db"):
-        os.remove(f)
-
-    DATABASE_URL = f"sqlite+aiosqlite:///data/{TEST_DB_NAME}.db"
-    db = AsyncDatabaseCore(DATABASE_URL, TABLES)
+    db = AsyncDatabaseCore("sqlite+aiosqlite://", TABLES)
     await db.startup()
 
     # 设置session getter
@@ -54,10 +47,16 @@ async def setup_test_data(
         await session.commit()
 
         # 创建测试用户
-        user = await create_user(session, "testuser")
+        user_id = await create_user(
+            session,
+            "testuser",
+            email="email@example.com",
+            nickname="Test User",
+            passwd="114514",
+        )
         await session.commit()
 
-        yield problemset_id, user.id
+        yield problemset_id, user_id
 
 
 @pytest.fixture

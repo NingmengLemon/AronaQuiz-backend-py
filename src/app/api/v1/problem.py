@@ -5,7 +5,6 @@ from uuid import UUID
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from app.api.deps import DbSessionDep
-from app.db.decos import in_session, in_transaction
 from app.db.operations import (
     add_problems,
     create_problemset,
@@ -30,8 +29,6 @@ logger = logging.getLogger("uvicorn.error")
 
 
 @router.post("/create_set", summary="创建新的题目集")
-@in_session
-@in_transaction()
 async def create_problem_set(
     session: DbSessionDep, problem_set: ProblemSetSubmit = Body()
 ) -> CreateProblemSetResponse:
@@ -43,15 +40,11 @@ async def create_problem_set(
 
 
 @router.get("/list_set", summary="列出现有的题目集")
-@in_session
-@in_transaction()
 async def list_set(session: DbSessionDep) -> list[ProblemSetResponse]:
     return await list_problemset(session)
 
 
 @router.post("/add", summary="添加题目")
-@in_session
-@in_transaction()
 async def add(
     session: DbSessionDep,
     problems: list[ProblemSubmit] = Body(),
@@ -72,8 +65,6 @@ async def add(
     summary="搜索题目",
     description="""kw 可留空, 此时不进行关键词筛选""",
 )
-@in_session
-@in_transaction()
 async def search(
     session: DbSessionDep,
     kw: str = Query(""),
@@ -95,8 +86,6 @@ async def search(
     summary="获取题目",
     description="""等价于 kw 字段留空的 /problem/search 接口""",
 )
-@in_session
-@in_transaction()
 async def get_problems(
     session: DbSessionDep,
     problemset_id: UUID | None = Query(None),
@@ -115,8 +104,6 @@ async def get_problems(
 @router.get(
     "/count", summary="获取题目数量", description="习题集 ID 留空时返回库中题目总数"
 )
-@in_session
-@in_transaction()
 async def get_count(
     session: DbSessionDep,
     problemset_id: UUID | None = Query(None),
@@ -125,16 +112,12 @@ async def get_count(
 
 
 @router.post("/delete", summary="删除题目")
-@in_session
-@in_transaction()
 async def delete(session: DbSessionDep, problems: list[UUID]) -> Literal["ok"]:
     await delete_problems(session, *problems)
     return "ok"
 
 
 @router.get("/random", summary="随机抽取题目")
-@in_session
-@in_transaction()
 async def random(
     session: DbSessionDep, problemset_id: UUID = Query(), n: int = Query(20)
 ) -> list[ProblemSubmit]:

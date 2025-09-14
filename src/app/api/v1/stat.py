@@ -5,7 +5,6 @@ from uuid import UUID
 from fastapi import APIRouter, Body, HTTPException
 
 from app.api.deps import DbSessionDep
-from app.db.decos import in_session, in_transaction
 from app.db.models import DBUser
 from app.db.operations import query_problem, query_user
 from app.db.operations import report_attempt as report_attempt_db
@@ -18,8 +17,6 @@ router = APIRouter(tags=["stat"])
     summary="上报答题情况",
     description="",
 )
-@in_session
-@in_transaction()
 async def report_attempt(
     session: DbSessionDep,
     user_id: UUID = Body(),

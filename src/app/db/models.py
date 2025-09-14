@@ -1,13 +1,15 @@
-import datetime
-import uuid
+from datetime import datetime, timedelta
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Awaitable, Generic
+from uuid import UUID, uuid4
 
+from pydantic import EmailStr
 from sqlalchemy import PrimaryKeyConstraint
 from sqlalchemy.ext.asyncio.session import AsyncAttrs as _AsyncAttrs
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.typ import T
+from app.utils.uuid7 import uuid7
 
 __all__ = ["DBOption", "DBProblem", "ProblemType"]
 
@@ -22,36 +24,36 @@ class ProblemType(StrEnum):
     multi_select = auto()
 
 
-class OptionAsyncAttrs:
+class _OptionAsyncAttrs:
     problem: Awaitable["DBProblem"]
 
 
-class DBOption(SQLModel, AsyncAttrs[OptionAsyncAttrs], table=True):
+class DBOption(SQLModel, AsyncAttrs[_OptionAsyncAttrs], table=True):
     __tablename__ = "option"  # type: ignore
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: UUID = Field(default_factory=uuid7, primary_key=True)
     order: int
     content: str
     is_correct: bool
 
-    problem_id: uuid.UUID = Field(
+    problem_id: UUID = Field(
         foreign_key="problem.id",
         # sa_column_kwargs={"ondelete": "CASCADE"},
     )
     problem: "DBProblem" = Relationship(back_populates="options")
 
 
-class ProblemAsyncAttrs:
+class _ProblemAsyncAttrs:
     options: Awaitable[list[DBOption]]
     problemset: Awaitable["DBProblemSet"]
 
 
-class DBProblem(SQLModel, AsyncAttrs[ProblemAsyncAttrs], table=True):
+class DBProblem(SQLModel, AsyncAttrs[_ProblemAsyncAttrs], table=True):
     __tablename__ = "problem"  # type: ignore
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: UUID = Field(default_factory=uuid7, primary_key=True)
     content: str
     type: ProblemType
 
-    problemset_id: uuid.UUID = Field(foreign_key="problemset.id")
+    problemset_id: UUID = Field(foreign_key="problemset.id")
     problemset: "DBProblemSet" = Relationship(back_populates="problems")
     options: list[DBOption] = Relationship(
         back_populates="problem",
@@ -59,13 +61,13 @@ class DBProblem(SQLModel, AsyncAttrs[ProblemAsyncAttrs], table=True):
     )
 
 
-class ProblemSetAsyncAttrs:
+class _ProblemSetAsyncAttrs:
     problems: Awaitable[list[DBProblem]]
 
 
-class DBProblemSet(SQLModel, AsyncAttrs[ProblemSetAsyncAttrs], table=True):
+class DBProblemSet(SQLModel, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
     __tablename__ = "problemset"  # type: ignore
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: UUID = Field(default_factory=uuid7, primary_key=True)
     name: str
 
     problems: list[DBProblem] = Relationship(
@@ -74,26 +76,56 @@ class DBProblemSet(SQLModel, AsyncAttrs[ProblemSetAsyncAttrs], table=True):
     )
 
 
+class UserRole(StrEnum):
+    USER = auto()
+    ADMIN = auto()
+    SU = auto()
+
+
 class DBUser(SQLModel, AsyncAttrs, table=True):
     __tablename__ = "user"  # type: ignore
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # 所有属性都无需二次 await 所以没写
+    id: UUID = Field(default_factory=uuid7, primary_key=True)
+    email: EmailStr = Field(unique=True)
     username: str = Field(unique=True)
-    password_hash: str | None = None
-    password_salt: str | None = None
-    nickname: str | None = None
+    password_hash: str
+    nickname: str = Field(unique=True)
+    role: UserRole = UserRole.USER
 
 
 class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
     __tablename__ = "answerrecord"  # type: ignore
     __table_args__ = (PrimaryKeyConstraint("user_id", "problem_id"),)
-    user_id: uuid.UUID = Field(foreign_key="user.id")
-    problem_id: uuid.UUID = Field(foreign_key="problem.id")
+    user_id: UUID = Field(foreign_key="user.id")
+    problem_id: UUID = Field(foreign_key="problem.id")
 
     correct_count: int = 0
     total_count: int = 0
-    last_attempt: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.fromtimestamp(0)
+    last_attempt: datetime = Field(default_factory=lambda: datetime.fromtimestamp(0))
+
+
+class LoginSessionStatus(StrEnum):
+    ACTIVE = auto()
+    REVOKED = auto()
+    EXPIRED = auto()
+    KICKED = auto()
+
+
+class LoginSession(SQLModel, AsyncAttrs, table=True):
+    __tablename__ = "loginsession"  # type: ignore
+    store_id: UUID = Field(default_factory=uuid7, primary_key=True)
+
+    session_id: UUID = Field(default_factory=uuid4)
+    user_id: UUID = Field(foreign_key="user.id")
+
+    expires_at: datetime = Field(
+        default_factory=lambda: datetime.now() + timedelta(days=30)
     )
+    created_at: datetime = Field(default_factory=datetime.now)
+    last_active: datetime = Field(default_factory=datetime.now)
+    status: LoginSessionStatus = LoginSessionStatus.ACTIVE
+
+    user_agent: str = ""
 
 
 TABLES = [
