@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.db.models import UserRole
+
 from ._base import (
     BaseOption,
     BaseProblem,
@@ -21,8 +23,12 @@ class ProblemResponse(BaseProblem):
     options: list[OptionResponse]
 
 
-class UserResponse(BaseUser):
+class UserInfoResponse(BaseUser):
     id: UUID
+
+
+class SelfInfoResponse(UserInfoResponse):
+    role: UserRole
 
 
 class ProblemSetResponse(BaseProblemSet):
@@ -44,6 +50,10 @@ class ProblemSetCreateStatus(StrEnum):
     already_exists = auto()
 
 
-class CreateProblemSetResponse(BaseModel):
+class ProblemSetCreateResponse(BaseModel):
     id: UUID
     status: ProblemSetCreateStatus
+
+
+class UserCreateResponse(BaseModel):
+    user_id: UUID

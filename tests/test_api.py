@@ -52,7 +52,7 @@ async def setup_test_data(
             "testuser",
             email="email@example.com",
             nickname="Test User",
-            passwd="114514",
+            password="114514",
         )
         await session.commit()
 

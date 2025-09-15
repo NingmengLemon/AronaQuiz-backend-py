@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr
 
 from app.db.models import ProblemType
 
@@ -20,6 +22,7 @@ class BaseStatistic(BaseModel):
 
 
 class BaseUser(BaseModel):
+    email: EmailStr
     username: str
     nickname: str
 

@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import json
-import os
 import time
 from typing import AsyncGenerator
 from uuid import UUID, uuid4
@@ -25,7 +24,6 @@ from app.db.operations import (
     ProblemSetCreateStatus,
     add_problems,
     create_problemset,
-    create_record,
     create_user,
     delete_all,
     delete_problems,
@@ -82,7 +80,7 @@ async def _create_user_simple(session: AsyncSession, username: str) -> UUID:
         username,
         email="email@example.com",
         nickname=username,
-        passwd="114514",
+        password="114514",
     )
 
 
@@ -532,14 +530,6 @@ async def test_answer_record_operations(
         assert problem_ids is not None
         problem_id = problem_ids[0]
         await session.commit()
-
-        # 测试创建答题记录
-        record = await create_record(session, user, problem_id)
-        await session.commit()
-        assert record.user_id == user
-        assert record.problem_id == problem_id
-        assert record.correct_count == 0
-        assert record.total_count == 0
 
         # 测试报告答题尝试（正确）
         test_time = datetime.datetime.now()

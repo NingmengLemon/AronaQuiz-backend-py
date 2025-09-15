@@ -19,8 +19,8 @@ from app.schemas.request import (
     ProblemSubmit,
 )
 from app.schemas.response import (
-    CreateProblemSetResponse,
     ProblemResponse,
+    ProblemSetCreateResponse,
     ProblemSetResponse,
 )
 
@@ -31,12 +31,12 @@ logger = logging.getLogger("uvicorn.error")
 @router.post("/create_set", summary="创建新的题目集")
 async def create_problem_set(
     session: DbSessionDep, problem_set: ProblemSetSubmit = Body()
-) -> CreateProblemSetResponse:
+) -> ProblemSetCreateResponse:
     id_, status = await create_problemset(
         session,
         problem_set.name,
     )
-    return CreateProblemSetResponse(id=id_, status=status)
+    return ProblemSetCreateResponse(id=id_, status=status)
 
 
 @router.get("/list_set", summary="列出现有的题目集")

@@ -8,8 +8,8 @@ hasher = PasswordHasher.from_parameters(RFC_9106_LOW_MEMORY)
 
 
 @in_thread
-def hash(passwd: str | bytes) -> str:
-    return hasher.hash(passwd)
+def hash(password: str | bytes) -> str:
+    return hasher.hash(password)
 
 
 @in_thread

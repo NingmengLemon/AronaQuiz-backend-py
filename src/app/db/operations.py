@@ -225,11 +225,11 @@ async def create_user(
     session: AsyncSession,
     username: str,
     email: str,
-    passwd: str,
+    password: str,
     nickname: str,
     role: UserRole = UserRole.USER,
 ) -> UUID:
-    hashed_passwd = await hash(passwd)
+    hashed_passwd = await hash(password)
     user = DBUser(
         email=email,
         username=username,
@@ -239,15 +239,6 @@ async def create_user(
     )
     session.add(user)
     return user.id
-
-
-@in_transaction()
-async def create_record(
-    session: AsyncSession, user_id: UUID, problem_id: UUID
-) -> DBAnswerRecord:
-    record = DBAnswerRecord(user_id=user_id, problem_id=problem_id)
-    session.add(record)
-    return record
 
 
 @in_transaction()
@@ -268,11 +259,8 @@ async def report_attempt(
             )
         ).one_or_none()
     ) is None:
-        record = await create_record(
-            session,
-            user_id,
-            problem_id,
-        )
+        record = DBAnswerRecord(user_id=user_id, problem_id=problem_id)
+
     record.total_count += 1
     if correct:
         record.correct_count += 1
@@ -286,4 +274,4 @@ async def query_statistic(
     problem_id: UUID | None = None,
     user_id: UUID | None = None,
 ) -> Any:
-    raise NotImplementedError
+    pass

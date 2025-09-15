@@ -1,23 +1,25 @@
-import functools
 from collections.abc import AsyncGenerator
 from typing import Annotated, Callable
+from uuid import UUID
 
-from fastapi import Depends, Request
+from fastapi import Depends, Header, HTTPException, Request
 from limits import RateLimitItem
 from limits import parse as parse_limit
-from limits.aio.storage import MemoryStorage, Storage
+from limits.aio.storage import MemoryStorage
 from limits.aio.strategies import RateLimiter, SlidingWindowCounterRateLimiter
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db.utils import auto_begin
+from app.db.models import LoginSession, LoginSessionStatus
+from app.utils.speedlimit import get_ipaddr, get_remote_address
 
-_SessionGetter = Callable[[], AsyncSession]
-_session_getter: _SessionGetter | None = None
+_SessionGetterType = Callable[[], AsyncSession]
+_session_getter: _SessionGetterType | None = None
 _speedlimiter: RateLimiter = SlidingWindowCounterRateLimiter(MemoryStorage())
 _speedlimit_descriptor: RateLimitItem = parse_limit("6/minute")
 
 
-def set_session_getter(getter: _SessionGetter | None) -> None:
+def set_session_getter(getter: _SessionGetterType | None) -> None:
     global _session_getter
     _session_getter = getter
 
@@ -30,8 +32,7 @@ async def _get_session() -> AsyncGenerator[AsyncSession, None]:
     if _session_getter is None:
         raise NotReadyError()
     async with _session_getter() as session:
-        async with auto_begin(session):
-            yield session
+        yield session
 
 
 DbSessionDep = Annotated[AsyncSession, Depends(_get_session, use_cache=False)]
@@ -51,8 +52,44 @@ def config_speedlimiter(
     return _speedlimiter, _speedlimit_descriptor
 
 
-async def _speed_limiter_entrance(request: Request) -> Request:
-    return request
+async def _speedlimit_entrance(request: Request) -> Request:
+    if _speedlimiter.hit(
+        _speedlimit_descriptor,
+        get_remote_address(request),
+        get_ipaddr(request),
+    ):
+        return request
+    else:
+        raise HTTPException(429, "请慢一点...!")
 
 
-SpeedLimReqDep = Annotated[Request, Depends(_speed_limiter_entrance)]
+SpeedLimReqDep = Depends(_speedlimit_entrance, use_cache=False)
+
+
+async def _check_login(
+    session: DbSessionDep, authorization: str = Header()
+) -> LoginSession:
+    if len(_ := authorization.split(maxsplit=1)) == 2:
+        rawtoken = _[1]
+    elif _:
+        rawtoken = _[0]
+    else:
+        raise HTTPException(401, "需要登录")
+    try:
+        token = UUID(rawtoken)
+    except Exception:
+        raise HTTPException(400, "凭据非法")
+
+    loginsession = (
+        await session.exec(
+            select(LoginSession).where(LoginSession.access_token == token)
+        )
+    ).one_or_none()
+    if loginsession is None:
+        raise HTTPException(401, "会话无效")
+    if loginsession.status == LoginSessionStatus.ACTIVE:
+        return loginsession
+    raise HTTPException(401, "会话无效")
+
+
+LoginRequired = Annotated[LoginSession, Depends(_check_login)]

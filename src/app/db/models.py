@@ -77,12 +77,12 @@ class DBProblemSet(SQLModel, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
 
 
 class UserRole(StrEnum):
-    USER = auto()
+    USER = auto()  # permission level: min
     ADMIN = auto()
-    SU = auto()
+    SU = auto()  # permission level: max
 
 
-class DBUser(SQLModel, AsyncAttrs, table=True):
+class DBUser(SQLModel, table=True):
     __tablename__ = "user"  # type: ignore
     # 所有属性都无需二次 await 所以没写
     id: UUID = Field(default_factory=uuid7, primary_key=True)
@@ -93,8 +93,8 @@ class DBUser(SQLModel, AsyncAttrs, table=True):
     role: UserRole = UserRole.USER
 
 
-class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
-    __tablename__ = "answerrecord"  # type: ignore
+class DBAnswerRecord(SQLModel, table=True):
+    __tablename__ = "answer_record"  # type: ignore
     __table_args__ = (PrimaryKeyConstraint("user_id", "problem_id"),)
     user_id: UUID = Field(foreign_key="user.id")
     problem_id: UUID = Field(foreign_key="problem.id")
@@ -106,26 +106,33 @@ class DBAnswerRecord(SQLModel, AsyncAttrs, table=True):
 
 class LoginSessionStatus(StrEnum):
     ACTIVE = auto()
-    REVOKED = auto()
+    REVOKED = auto()  # operated by user
     EXPIRED = auto()
-    KICKED = auto()
+    KICKED = auto()  # operated by security sys & admin
 
 
-class LoginSession(SQLModel, AsyncAttrs, table=True):
-    __tablename__ = "loginsession"  # type: ignore
-    store_id: UUID = Field(default_factory=uuid7, primary_key=True)
+class LoginSession(SQLModel, table=True):
+    __tablename__ = "login_session"  # type: ignore
+    id: UUID = Field(default_factory=uuid7, primary_key=True)
 
-    session_id: UUID = Field(default_factory=uuid4)
+    access_token: UUID = Field(default_factory=uuid4)
     user_id: UUID = Field(foreign_key="user.id")
 
     expires_at: datetime = Field(
         default_factory=lambda: datetime.now() + timedelta(days=30)
     )
     created_at: datetime = Field(default_factory=datetime.now)
+    last_renewal: datetime = Field(default_factory=datetime.now)
     last_active: datetime = Field(default_factory=datetime.now)
     status: LoginSessionStatus = LoginSessionStatus.ACTIVE
 
-    user_agent: str = ""
+    device_info: str = ""
+    refresh_token_hash: str
+    refresh_token_expires_at: datetime = Field(
+        default_factory=lambda: datetime.now() + timedelta(days=120)
+    )
+    # refresh token rotate 时, 创建一个新的 session, 将当前 session 设为 expired
+    # 定期移除过旧的过期的 session
 
 
 TABLES = [
@@ -136,5 +143,6 @@ TABLES = [
         DBProblemSet,
         DBUser,
         DBAnswerRecord,
+        LoginSession,
     )
 ]
