@@ -1,7 +1,7 @@
-import datetime
 import logging
+from datetime import datetime, timedelta
 from typing import Any, cast, overload
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import col, delete, func, or_, select
@@ -15,9 +15,19 @@ from app.schemas.response import (
     ProblemSetResponse,
 )
 from app.typ import T
-from app.utils.security import hash
+from app.utils.security import hash, sha256, verify
 
-from .models import DBAnswerRecord, DBOption, DBProblem, DBProblemSet, DBUser, UserRole
+from .models import (
+    ACCESS_TOKEN_LIFETIME,
+    DBAnswerRecord,
+    DBOption,
+    DBProblem,
+    DBProblemSet,
+    DBUser,
+    LoginSession,
+    LoginSessionStatus,
+    UserRole,
+)
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -247,7 +257,7 @@ async def report_attempt(
     problem_id: UUID,
     user_id: UUID,
     correct: bool,
-    time: datetime.datetime | None = None,
+    time: datetime | None = None,
 ) -> None:
     if (
         record := (
@@ -264,7 +274,7 @@ async def report_attempt(
     record.total_count += 1
     if correct:
         record.correct_count += 1
-    record.last_attempt = time or datetime.datetime.now()
+    record.last_attempt = time or datetime.now()
     session.add(record)
 
 
@@ -274,4 +284,75 @@ async def query_statistic(
     problem_id: UUID | None = None,
     user_id: UUID | None = None,
 ) -> Any:
-    pass
+    raise NotImplementedError
+
+
+@in_transaction()
+async def login(
+    session: AsyncSession,
+    *,
+    password: str,
+    username: str | None = None,
+    email: str | None = None,
+) -> tuple[UUID, UUID] | None:
+    if not ((username is None) ^ (email is None)):
+        raise ValueError("provide either username or email")
+    user = (
+        await session.exec(
+            select(DBUser).where(
+                (
+                    DBUser.username == username
+                    if email is None
+                    else DBUser.email == email
+                )
+            )
+        )
+    ).one_or_none()
+    if user is None:
+        return None
+    if not await verify(user.password_hash, password):
+        return None
+    refresh_token = uuid4()
+    new_session = LoginSession(
+        user_id=user.id,
+        refresh_token_hash=await sha256(refresh_token),
+    )
+    session.add(new_session)
+    return new_session.access_token, refresh_token
+
+
+@in_transaction()
+async def refresh_access_token(
+    session: AsyncSession, access_token: UUID, refresh_token: UUID
+) -> tuple[UUID, UUID | None] | None:
+    login_session = (
+        await session.exec(
+            select(LoginSession).where(LoginSession.access_token == access_token)
+        )
+    ).one_or_none()
+    if login_session is None:
+        return None
+    if not (login_session.refresh_token_hash == await sha256(refresh_token)):
+        return None
+
+    new_access_token = login_session.access_token = uuid4()
+    login_session.last_renewal = datetime.now()
+    login_session.expires_at = login_session.last_renewal + timedelta(
+        days=ACCESS_TOKEN_LIFETIME
+    )
+    session.add(login_session)
+    return new_access_token, None
+
+
+@in_transaction()
+async def logout(session: AsyncSession, access_token: UUID) -> bool:
+    login_session = (
+        await session.exec(
+            select(LoginSession).where(LoginSession.access_token == access_token)
+        )
+    ).one_or_none()
+    if login_session is None:
+        return False
+    login_session.status = LoginSessionStatus.REVOKED
+    session.add(login_session)
+    return True

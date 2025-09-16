@@ -11,7 +11,8 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.typ import T
 from app.utils.uuid7 import uuid7
 
-__all__ = ["DBOption", "DBProblem", "ProblemType"]
+ACCESS_TOKEN_LIFETIME = 14  # days
+REFRESH_TOKEN_LIFETIME = 120  # days
 
 
 class AsyncAttrs(_AsyncAttrs, Generic[T]):
@@ -107,8 +108,8 @@ class DBAnswerRecord(SQLModel, table=True):
 class LoginSessionStatus(StrEnum):
     ACTIVE = auto()
     REVOKED = auto()  # operated by user
-    EXPIRED = auto()
     KICKED = auto()  # operated by security sys & admin
+    EXPIRED = auto()  # also judged by <expires_at> field
 
 
 class LoginSession(SQLModel, table=True):

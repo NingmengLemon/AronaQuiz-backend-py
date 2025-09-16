@@ -1,3 +1,6 @@
+import hashlib
+from typing import Any
+
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from argon2.profiles import RFC_9106_LOW_MEMORY
@@ -13,9 +16,14 @@ def hash(password: str | bytes) -> str:
 
 
 @in_thread
-def verify(hashed: str | bytes, passwd: str | bytes) -> bool:
+def verify(hashed: str | bytes, password: str | bytes) -> bool:
     try:
-        hasher.verify(hashed, passwd)
+        hasher.verify(hashed, password)
     except VerifyMismatchError:
         return False
     return True
+
+
+@in_thread
+def sha256(value: Any) -> str:
+    return hashlib.sha256(str(value).encode("utf-8")).hexdigest()

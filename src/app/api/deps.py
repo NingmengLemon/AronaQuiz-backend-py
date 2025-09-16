@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from datetime import datetime
 from typing import Annotated, Callable
 from uuid import UUID
 
@@ -87,8 +88,22 @@ async def _check_login(
     ).one_or_none()
     if loginsession is None:
         raise HTTPException(401, "会话无效")
+
+    if (
+        loginsession.expires_at >= datetime.now()
+        and loginsession.status == LoginSessionStatus.ACTIVE
+    ):
+        loginsession.status = LoginSessionStatus.EXPIRED
+        session.add(loginsession)
+        raise HTTPException(401, "凭据过期")
+    if loginsession.status == LoginSessionStatus.EXPIRED:
+        raise HTTPException(401, "凭据过期")
+
     if loginsession.status == LoginSessionStatus.ACTIVE:
+        loginsession.last_active = datetime.now()
+        session.add(loginsession)
         return loginsession
+
     raise HTTPException(401, "会话无效")
 
 

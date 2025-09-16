@@ -57,3 +57,13 @@ class ProblemSetCreateResponse(BaseModel):
 
 class UserCreateResponse(BaseModel):
     user_id: UUID
+
+
+class RefreshTokenResponse(BaseModel):
+    access_token: UUID
+    refresh_token: UUID | None = None
+
+
+class LoginSuccessResponse(BaseModel):
+    access_token: UUID
+    refresh_token: UUID
