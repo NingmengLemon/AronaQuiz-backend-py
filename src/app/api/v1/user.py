@@ -78,8 +78,12 @@ async def register(
 
 
 @router.get("/me")
-async def get_myinfo(user_id: LoginRequired, db: DbSessionDep) -> SelfInfoResponse:
-    user = (await db.exec(select(DBUser).where(DBUser.id == user_id))).one()
+async def get_myinfo(
+    login_session: LoginRequired, db: DbSessionDep
+) -> SelfInfoResponse:
+    user = (
+        await db.exec(select(DBUser).where(DBUser.id == login_session.user_id))
+    ).one()
     return SelfInfoResponse.model_validate(user)
 
 

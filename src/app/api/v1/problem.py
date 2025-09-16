@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, HTTPException, Query
 
-from app.api.deps import DbSessionDep, RequireRoles
+from app.api.deps import DbSessionDep, LoginRequired, RequireRoles
 from app.db.models import UserRole
 from app.db.operations import (
     add_problems,
@@ -43,7 +43,7 @@ async def create_problem_set(
 
 
 @router.get("/list_set", summary="列出现有的题目集")
-async def list_set(session: DbSessionDep) -> list[ProblemSetResponse]:
+async def list_set(session: DbSessionDep, _: LoginRequired) -> list[ProblemSetResponse]:
     return await list_problemset(session)
 
 
@@ -71,6 +71,7 @@ async def add(
 )
 async def search(
     session: DbSessionDep,
+    _: LoginRequired,
     kw: str = Query(""),
     problemset_id: UUID | None = Query(None),
     page: int = Query(1, ge=1),
@@ -92,6 +93,7 @@ async def search(
 )
 async def get_problems(
     session: DbSessionDep,
+    _: LoginRequired,
     problemset_id: UUID | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1),
@@ -110,6 +112,7 @@ async def get_problems(
 )
 async def get_count(
     session: DbSessionDep,
+    _: LoginRequired,
     problemset_id: UUID | None = Query(None),
 ) -> int:
     return await get_problem_count(session, problemset_id)
@@ -127,6 +130,9 @@ async def delete(
 
 @router.get("/random", summary="随机抽取题目")
 async def random(
-    session: DbSessionDep, problemset_id: UUID = Query(), n: int = Query(20)
+    session: DbSessionDep,
+    _: LoginRequired,
+    problemset_id: UUID = Query(),
+    n: int = Query(20),
 ) -> list[ProblemSubmit]:
     return await sample(session, problemset_id=problemset_id, n=n)

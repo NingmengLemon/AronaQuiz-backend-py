@@ -107,7 +107,7 @@ async def _check_login(
     raise HTTPException(401, "会话无效")
 
 
-LoginRequired = Annotated[LoginSession, Depends(_check_login)]
+LoginRequired = Annotated[LoginSession, Depends(_check_login, use_cache=False)]
 
 
 def RequireRoles(*roles: UserRole) -> Any:
@@ -128,4 +128,4 @@ def RequireRoles(*roles: UserRole) -> Any:
             raise HTTPException(403, "权限不足")
         return role
 
-    return Depends(check_role)
+    return Depends(check_role, use_cache=False)
