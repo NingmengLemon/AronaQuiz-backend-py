@@ -54,7 +54,7 @@ def config_speedlimiter(
 
 
 async def _speedlimit_entrance(request: Request) -> Request:
-    if _speedlimiter.hit(
+    if await _speedlimiter.hit(
         _speedlimit_descriptor,
         get_remote_address(request),
         get_ipaddr(request),
