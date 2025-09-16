@@ -8,7 +8,7 @@ from pydantic_core import PydanticCustomError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.deps import DbSessionDep, LoginRequired, SpeedLimReqDep
+from app.api.deps import DbSessionDep, LoginRequired, RequireRoles, SpeedLimReqDep
 from app.db.models import DBUser, UserRole
 from app.db.operations import create_user
 from app.schemas.request import UserRegisterSubmit
@@ -89,3 +89,12 @@ async def get_user_info(
 ) -> UserInfoResponse:
     user = (await db.exec(select(DBUser).where(DBUser.id == user_id))).one()
     return UserInfoResponse.model_validate(user)
+
+
+@router.post("/delete")
+async def delete_user(
+    db: DbSessionDep,
+    user_ids: list[UUID] = Body(),
+    _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
+) -> list[UUID]:
+    raise NotImplementedError

@@ -4,7 +4,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, HTTPException, Query
 
-from app.api.deps import DbSessionDep
+from app.api.deps import DbSessionDep, RequireRoles
+from app.db.models import UserRole
 from app.db.operations import (
     add_problems,
     create_problemset,
@@ -30,7 +31,9 @@ logger = logging.getLogger("uvicorn.error")
 
 @router.post("/create_set", summary="创建新的题目集")
 async def create_problem_set(
-    session: DbSessionDep, problem_set: ProblemSetSubmit = Body()
+    session: DbSessionDep,
+    problem_set: ProblemSetSubmit = Body(),
+    _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
 ) -> ProblemSetCreateResponse:
     id_, status = await create_problemset(
         session,
@@ -49,6 +52,7 @@ async def add(
     session: DbSessionDep,
     problems: list[ProblemSubmit] = Body(),
     problemset_id: UUID = Body(),
+    _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
 ) -> list[UUID]:
     result = await add_problems(
         session,
@@ -112,7 +116,11 @@ async def get_count(
 
 
 @router.post("/delete", summary="删除题目")
-async def delete(session: DbSessionDep, problems: list[UUID]) -> Literal["ok"]:
+async def delete(
+    session: DbSessionDep,
+    problems: list[UUID],
+    _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
+) -> Literal["ok"]:
     await delete_problems(session, *problems)
     return "ok"
 

@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
 from datetime import datetime
-from typing import Annotated, Callable
+from typing import Annotated, Any, Callable
 from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, Request
@@ -11,7 +11,7 @@ from limits.aio.strategies import RateLimiter, SlidingWindowCounterRateLimiter
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db.models import LoginSession, LoginSessionStatus
+from app.db.models import DBUser, LoginSession, LoginSessionStatus, UserRole
 from app.utils.speedlimit import get_ipaddr, get_remote_address
 
 _SessionGetterType = Callable[[], AsyncSession]
@@ -108,3 +108,24 @@ async def _check_login(
 
 
 LoginRequired = Annotated[LoginSession, Depends(_check_login)]
+
+
+def RequireRoles(*roles: UserRole) -> Any:
+    async def check_role(
+        session: DbSessionDep, login_session: LoginRequired
+    ) -> UserRole:
+        if (
+            role := (
+                (
+                    await session.exec(
+                        select(DBUser).where(DBUser.id == login_session.user_id)
+                    )
+                )
+                .one()
+                .role
+            )
+        ) not in roles:
+            raise HTTPException(403, "权限不足")
+        return role
+
+    return Depends(check_role)
