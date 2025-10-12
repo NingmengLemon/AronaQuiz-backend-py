@@ -36,7 +36,7 @@ async def _get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-DbSessionDep = Annotated[AsyncSession, Depends(_get_session, use_cache=False)]
+DbSessionDep = Annotated[AsyncSession, Depends(_get_session)]
 
 
 def config_speedlimiter(
@@ -64,11 +64,11 @@ async def _speedlimit_entrance(request: Request) -> Request:
         raise HTTPException(429, "请慢一点...!")
 
 
-SpeedLimReqDep = Depends(_speedlimit_entrance, use_cache=False)
+SpeedLimReqDep = Depends(_speedlimit_entrance)
 
 
 async def _check_login(
-    session: DbSessionDep, authorization: str = Header()
+    session: DbSessionDep, authorization: str = Header("")
 ) -> LoginSession:
     if len(_ := authorization.split(maxsplit=1)) == 2:
         rawtoken = _[1]
@@ -107,7 +107,7 @@ async def _check_login(
     raise HTTPException(401, "会话无效")
 
 
-LoginRequired = Annotated[LoginSession, Depends(_check_login, use_cache=False)]
+LoginRequired = Annotated[LoginSession, Depends(_check_login)]
 
 
 def RequireRoles(*roles: UserRole) -> Any:
