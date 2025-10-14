@@ -9,18 +9,6 @@ from app.db.utils import auto_begin
 from app.typ import AsyncCallable, P, T, T_co
 
 
-def in_session(
-    func: AsyncCallable[Concatenate[AsyncSession, P], T],
-) -> AsyncCallable[Concatenate[AsyncSession, P], T]:
-    @functools.wraps(func)
-    async def wrapped(session: AsyncSession, *args: P.args, **kwargs: P.kwargs) -> T:
-        async with session:
-            result = await func(session, *args, **kwargs)
-        return result
-
-    return wrapped
-
-
 def catch_db_exceptions(
     func: AsyncCallable[Concatenate[AsyncSession, P], T],
 ) -> AsyncCallable[Concatenate[AsyncSession, P], T]:

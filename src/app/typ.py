@@ -1,5 +1,8 @@
+from collections.abc import Awaitable, Callable
 from enum import Enum
-from typing import Awaitable, ParamSpec, Protocol, TypeVar
+from typing import ParamSpec, Protocol, TypeVar
+
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -12,3 +15,6 @@ class AsyncCallable(Protocol[P, T_co]):
 
 class VoidType(Enum):
     VOID = type("_VOID", (), {})
+
+
+SessionGetterType = Callable[[], AsyncSession]

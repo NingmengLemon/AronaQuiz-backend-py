@@ -110,6 +110,7 @@ class LoginSessionStatus(StrEnum):
     REVOKED = auto()  # operated by user
     KICKED = auto()  # operated by security sys & admin
     EXPIRED = auto()  # also judged by <expires_at> field
+    INVALID = auto()  # for other invalid conditions
 
 
 class LoginSession(SQLModel, table=True):

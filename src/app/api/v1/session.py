@@ -5,7 +5,11 @@ from fastapi import APIRouter, Body, Header, HTTPException
 
 from app.api.deps import DbSessionDep, LoginRequired, SpeedLimReqDep
 from app.db.operations import login, logout, refresh_access_token
-from app.schemas.request import LoginByEmailSubmit, LoginByUsernameSubmit
+from app.schemas.request import (
+    LoginByEmailSubmit,
+    LoginByUserIdSubmit,
+    LoginByUsernameSubmit,
+)
 from app.schemas.response import LoginSuccessResponse, RefreshTokenResponse
 
 router = APIRouter(tags=["session"])
@@ -14,7 +18,7 @@ router = APIRouter(tags=["session"])
 @router.post("/login")
 async def do_login(
     db: DbSessionDep,
-    submit: LoginByUsernameSubmit | LoginByEmailSubmit = Body(),
+    submit: LoginByUsernameSubmit | LoginByEmailSubmit | LoginByUserIdSubmit = Body(),
     authorization: str = Header(""),
     _: Any = SpeedLimReqDep,
 ) -> LoginSuccessResponse:
@@ -22,11 +26,13 @@ async def do_login(
     # https://github.com/fastapi/fastapi/issues/10127
     if authorization:
         raise HTTPException(409, "需要先退出登录")
-    params: dict[str, str] = {"password": submit.password}
+    params: dict[str, Any] = {"password": submit.password}
     if isinstance(submit, LoginByEmailSubmit):
         params["email"] = submit.email
     elif isinstance(submit, LoginByUsernameSubmit):
         params["username"] = submit.username
+    elif isinstance(submit, LoginByUserIdSubmit):
+        params["user_id"] = submit.user_id
     if (_ := await login(db, **params)) is None:
         raise HTTPException(401, "用户名或密码错误")
     access_token, refresh_token = _

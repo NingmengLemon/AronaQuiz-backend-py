@@ -1,6 +1,5 @@
-from collections.abc import AsyncGenerator
-from datetime import datetime
-from typing import Annotated, Any, Callable
+from collections.abc import AsyncGenerator, Callable
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, Request
@@ -12,50 +11,31 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.models import DBUser, LoginSession, LoginSessionStatus, UserRole
+from app.db.operations import validate_login_session
 from app.utils.speedlimit import get_ipaddr, get_remote_address
 
-_SessionGetterType = Callable[[], AsyncSession]
-_session_getter: _SessionGetterType | None = None
-_speedlimiter: RateLimiter = SlidingWindowCounterRateLimiter(MemoryStorage())
-_speedlimit_descriptor: RateLimitItem = parse_limit("6/minute")
+# global vars for injection
+session_getter: Callable[[], AsyncSession] | None = None
+speedlimiter: RateLimiter | None = SlidingWindowCounterRateLimiter(MemoryStorage())
+speedlimit_descriptor: RateLimitItem = parse_limit("6/minute")
 
 
-def set_session_getter(getter: _SessionGetterType | None) -> None:
-    global _session_getter
-    _session_getter = getter
-
-
-class NotReadyError(Exception):
-    """session getter not setup yet"""
-
-
-async def _get_session() -> AsyncGenerator[AsyncSession, None]:
-    if _session_getter is None:
-        raise NotReadyError()
-    async with _session_getter() as session:
+async def get_session_dependency() -> AsyncGenerator[AsyncSession, None]:
+    if session_getter is None:
+        raise RuntimeError("inject session_getter first")
+    async with session_getter() as session:
         yield session
 
 
-DbSessionDep = Annotated[AsyncSession, Depends(_get_session)]
-
-
-def config_speedlimiter(
-    limiter: RateLimiter | None = None, descriptor: RateLimitItem | str | None = None
-) -> tuple[RateLimiter, RateLimitItem]:
-    global _speedlimiter
-    global _speedlimit_descriptor
-    if limiter is not None:
-        _speedlimiter = limiter
-    if isinstance(descriptor, str):
-        _speedlimit_descriptor = parse_limit(descriptor)
-    elif isinstance(descriptor, RateLimitItem):
-        _speedlimit_descriptor = descriptor
-    return _speedlimiter, _speedlimit_descriptor
+DbSessionDep = Annotated[AsyncSession, Depends(get_session_dependency)]
 
 
 async def _speedlimit_entrance(request: Request) -> Request:
-    if await _speedlimiter.hit(
-        _speedlimit_descriptor,
+    if speedlimiter is None:
+        return request
+
+    if await speedlimiter.hit(
+        speedlimit_descriptor,
         get_remote_address(request),
         get_ipaddr(request),
     ):
@@ -76,35 +56,26 @@ async def _check_login(
         rawtoken = _[0]
     else:
         raise HTTPException(401, "需要登录")
+
     try:
         token = UUID(rawtoken)
     except Exception:
         raise HTTPException(400, "凭据非法")
 
-    loginsession = (
-        await session.exec(
-            select(LoginSession).where(LoginSession.access_token == token)
-        )
-    ).one_or_none()
-    if loginsession is None:
+    session_status, login_session = await validate_login_session(
+        session, access_token=token
+    )
+    match session_status:
+        case LoginSessionStatus.EXPIRED:
+            raise HTTPException(401, "凭据过期")
+        case LoginSessionStatus.ACTIVE:
+            pass
+        case _:
+            raise HTTPException(401, "会话无效")
+    if login_session is None:
         raise HTTPException(401, "会话无效")
 
-    if (
-        loginsession.expires_at >= datetime.now()
-        and loginsession.status == LoginSessionStatus.ACTIVE
-    ):
-        loginsession.status = LoginSessionStatus.EXPIRED
-        session.add(loginsession)
-        raise HTTPException(401, "凭据过期")
-    if loginsession.status == LoginSessionStatus.EXPIRED:
-        raise HTTPException(401, "凭据过期")
-
-    if loginsession.status == LoginSessionStatus.ACTIVE:
-        loginsession.last_active = datetime.now()
-        session.add(loginsession)
-        return loginsession
-
-    raise HTTPException(401, "会话无效")
+    return login_session
 
 
 LoginRequired = Annotated[LoginSession, Depends(_check_login)]
@@ -128,4 +99,4 @@ def RequireRoles(*roles: UserRole) -> Any:
             raise HTTPException(403, "权限不足")
         return role
 
-    return Depends(check_role, use_cache=False)
+    return Depends(check_role)

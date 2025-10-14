@@ -45,11 +45,11 @@ async def create_problemset(
         await session.exec(select(DBProblemSet).where(DBProblemSet.name == name))
     ).one_or_none()
     if problemset is not None:
-        return problemset.id, ProblemSetCreateStatus.already_exists
+        return problemset.id, ProblemSetCreateStatus.ALREADY_EXISTS
     problemset = DBProblemSet(name=name, problems=[])
     session.add(problemset)
 
-    return problemset.id, ProblemSetCreateStatus.success
+    return problemset.id, ProblemSetCreateStatus.SUCCESS
 
 
 @in_transaction()
@@ -293,21 +293,19 @@ async def login(
     *,
     password: str,
     username: str | None = None,
+    user_id: UUID | None = None,
     email: str | None = None,
 ) -> tuple[UUID, UUID] | None:
-    if not ((username is None) ^ (email is None)):
-        raise ValueError("provide either username or email")
-    user = (
-        await session.exec(
-            select(DBUser).where(
-                (
-                    DBUser.username == username
-                    if email is None
-                    else DBUser.email == email
-                )
-            )
-        )
-    ).one_or_none()
+    if user_id is not None:
+        cond = DBUser.id == user_id
+    elif username is not None:
+        cond = DBUser.username == username
+    elif email is not None:
+        cond = DBUser.email == email
+    else:
+        raise ValueError("missing user identifier")
+
+    user = (await session.exec(select(DBUser).where(cond))).one_or_none()
     if user is None:
         return None
     if not await verify(user.password_hash, password):
@@ -319,6 +317,45 @@ async def login(
     )
     session.add(new_session)
     return new_session.access_token, refresh_token
+
+
+async def query_login_session(
+    session: AsyncSession,
+    *,
+    access_token: UUID | None = None,
+    session_id: UUID | None = None,
+) -> LoginSession | None:
+    if access_token is not None:
+        cond = LoginSession.access_token == access_token
+    elif session_id is not None:
+        cond = LoginSession.id == session_id
+    else:
+        raise ValueError("missing login session identifier")
+    return (await session.exec(select(LoginSession).where(cond))).one_or_none()
+
+
+@in_transaction()
+async def validate_login_session(
+    session: AsyncSession, access_token: UUID
+) -> tuple[LoginSessionStatus, LoginSession | None]:
+    login_session = await query_login_session(session, access_token=access_token)
+    if login_session is None:
+        return LoginSessionStatus.INVALID, None
+
+    if login_session.status == LoginSessionStatus.EXPIRED:
+        return LoginSessionStatus.EXPIRED, None
+    if login_session.expires_at <= datetime.now():
+        if login_session.status == LoginSessionStatus.ACTIVE:
+            login_session.status = LoginSessionStatus.EXPIRED
+            session.add(login_session)
+        return LoginSessionStatus.EXPIRED, None
+
+    if login_session.status == LoginSessionStatus.ACTIVE:
+        login_session.last_active = datetime.now()
+        session.add(login_session)
+        return LoginSessionStatus.ACTIVE, login_session
+
+    return LoginSessionStatus.INVALID, None
 
 
 @in_transaction()

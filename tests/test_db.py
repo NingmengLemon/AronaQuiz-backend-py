@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import json
 import time
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from uuid import UUID, uuid4
 
 import dotenv
@@ -11,10 +11,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db.core import AsyncDatabaseCore
 from app.db.models import (
     TABLES,
-    DBAnswerRecord,
     DBOption,
     DBProblem,
     DBUser,
@@ -37,38 +35,21 @@ from app.db.operations import (
     search_problem,
 )
 from app.schemas.request import OptionSubmit, ProblemSubmit
+from app.typ import SessionGetterType
 
 dotenv.load_dotenv()
 
 DB_NAME = "test_dbopts"
 
 
-@pytest.fixture(scope="module")
-async def init_database() -> AsyncGenerator[AsyncDatabaseCore, None]:
-    # username = os.getenv("DB_USER")
-    # password = os.getenv("DB_PASSWORD")
-    # host = os.getenv("DB_HOST")
-    # port = int((os.getenv("DB_PORT") or 5432))
-    # DATABASE_URL = f"postgresql+asyncpg://{username}:{password}@{host}:{port}/{dbname}"
-    DATABASE_URL = "sqlite+aiosqlite://"
-    db = AsyncDatabaseCore(
-        DATABASE_URL,
-        TABLES,
-        # echo=True,
-    )
-    await db.startup()
-    yield db
-
-
 @pytest.fixture(scope="function")
 async def init_problemset_uuid(
-    init_database: AsyncDatabaseCore,
+    test_session_getter: SessionGetterType,
 ) -> AsyncGenerator[UUID, None]:
-    async with init_database.get_session() as session:
-        await delete_all(session)
-        await session.exec(delete(DBUser))  # type: ignore
-        await session.exec(delete(DBAnswerRecord))  # type: ignore
-        await session.commit()
+    async with test_session_getter() as session:
+        for table in TABLES:
+            await session.exec(delete(table))  # type: ignore
+        await session.flush()
         id_, _ = await create_problemset(session, "test")
         await session.commit()
     yield id_
@@ -85,9 +66,9 @@ async def _create_user_simple(session: AsyncSession, username: str) -> UUID:
 
 
 async def test_add(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         await add_problems(
             session,
             init_problemset_uuid,
@@ -104,7 +85,7 @@ async def test_add(
         )
         await session.commit()
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         problems = (await session.exec(select(DBProblem))).all()
         assert len(problems) == 1
         problem = problems[0]
@@ -115,7 +96,7 @@ async def test_add(
 
 
 async def test_multiadd(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     with open("data/example_data.csv", "r", encoding="utf-8", errors="replace") as fp:
         sheet = fp.readlines()
@@ -148,7 +129,7 @@ async def test_multiadd(
         sheet_ = json.load(fp)
     additional = 0
     start_time = time.time()
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         for s in sheet_:
             i, _ = await create_problemset(session, s["name"])
             await add_problems(
@@ -172,10 +153,10 @@ async def test_multiadd(
 
 
 async def test_query_problem(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试查询单个问题功能"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 先添加一个问题
         problem_ids = await add_problems(
             session,
@@ -194,7 +175,7 @@ async def test_query_problem(
         problem_id = problem_ids[0]
         await session.commit()
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 查询刚才添加的问题
         queried_problem = await query_problem(session, problem_id)
         assert queried_problem is not None
@@ -204,7 +185,7 @@ async def test_query_problem(
         assert queried_problem.options[0].content == "正确答案"
         assert queried_problem.options[0].is_correct is True
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 测试查询不存在的问题
         non_existent_id = uuid4()
         non_existent_problem = await query_problem(session, non_existent_id)
@@ -212,10 +193,10 @@ async def test_query_problem(
 
 
 async def test_search_problem(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试搜索问题功能"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 添加几个测试问题
         await add_problems(
             session,
@@ -247,7 +228,7 @@ async def test_search_problem(
         )
         await session.commit()
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 搜索包含"Python"的问题
         results = await search_problem(session, "Python")
         assert len(results) == 2
@@ -267,10 +248,10 @@ async def test_search_problem(
 
 
 async def test_delete_problems(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试删除问题功能"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 添加几个问题
         problem_ids = await add_problems(
             session,
@@ -295,7 +276,7 @@ async def test_delete_problems(
         await session.commit()
         assert await get_problem_count(session) == 3
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 删除第一个问题
         await delete_problems(session, problem_ids[0])
         await session.commit()
@@ -310,7 +291,7 @@ async def test_delete_problems(
         assert remaining_problem is not None
         assert remaining_problem.content == "问题2"
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 删除所有问题
         await delete_all(session)
         await session.commit()
@@ -318,10 +299,10 @@ async def test_delete_problems(
 
 
 async def test_sample_problems(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试随机抽样功能"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 添加多个问题
         problems = []
         for i in range(50):
@@ -339,7 +320,7 @@ async def test_sample_problems(
         await session.commit()
         assert await get_problem_count(session) == 50
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 抽样10个问题
         sampled_problems = await sample(session, init_problemset_uuid, 10)
         assert len(sampled_problems) == 10
@@ -356,10 +337,10 @@ async def test_sample_problems(
 
 
 async def test_multi_select_problem(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试多选问题类型"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 添加一个多选题
         problem_ids = await add_problems(
             session,
@@ -379,7 +360,7 @@ async def test_multi_select_problem(
         problem_id = problem_ids[0]
         await session.commit()
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 查询并验证多选题
         problem = await query_problem(session, problem_id)
         assert problem is not None
@@ -394,10 +375,10 @@ async def test_multi_select_problem(
 
 
 async def test_search_edge_cases(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试搜索边界情况"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 添加测试数据
         await add_problems(
             session,
@@ -410,7 +391,7 @@ async def test_search_edge_cases(
         )
         await session.commit()
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 测试不存在的关键词
         no_results = await search_problem(session, "不存在的关键词")
         assert no_results == []
@@ -425,10 +406,10 @@ async def test_search_edge_cases(
 
 
 async def test_problem_count(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试问题计数功能"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 初始计数应为0
         assert await get_problem_count(session) == 0
 
@@ -465,27 +446,27 @@ async def test_problem_count(
 
 
 async def test_problemset(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         id_, status = await create_problemset(session, "test")
         assert id_ == init_problemset_uuid
-        assert status == ProblemSetCreateStatus.already_exists
+        assert status == ProblemSetCreateStatus.ALREADY_EXISTS
         await session.commit()
 
         id_, status = await create_problemset(session, "test2")
         assert id_ != init_problemset_uuid
-        assert status == ProblemSetCreateStatus.success
+        assert status == ProblemSetCreateStatus.SUCCESS
         await session.commit()
 
         id__ = await delete_problemset(session, id_)
         assert id__ is not None
 
 
-async def test_user_operations(init_database: AsyncDatabaseCore) -> None:
+async def test_user_operations(test_session_getter: SessionGetterType) -> None:
     """测试用户相关操作"""
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 测试创建用户
         user1 = await _create_user_simple(session, "testuser1")
         await session.commit()
@@ -506,11 +487,11 @@ async def test_user_operations(init_database: AsyncDatabaseCore) -> None:
 
 
 async def test_answer_record_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试答题记录相关操作"""
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 创建用户和问题
         user = await _create_user_simple(session, "test_student")
         await session.commit()
@@ -548,10 +529,10 @@ async def test_answer_record_operations(
 
 
 async def test_advanced_search_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试高级搜索功能"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 添加多样化的测试数据
         problems_data = [
             ("Python编程基础知识", "Python", "编程语言", "基础", "高级"),
@@ -619,12 +600,12 @@ async def test_advanced_search_operations(
 
 
 async def test_concurrent_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试并发操作"""
 
     async def add_problems_batch(batch_id: int) -> None:
-        async with init_database.get_session() as session:
+        async with test_session_getter() as session:
             problems = []
             for i in range(10):
                 problems.append(
@@ -648,16 +629,16 @@ async def test_concurrent_operations(
     tasks = [add_problems_batch(i) for i in range(5)]
     await asyncio.gather(*tasks)
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         total_count = await get_problem_count(session)
         assert total_count == 50  # 5个批次，每批10个问题
 
 
 async def test_data_validation_and_constraints(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试数据验证和约束"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 测试问题内容不能为空
         try:
             await add_problems(
@@ -704,19 +685,21 @@ async def test_data_validation_and_constraints(
         assert sorted_options[3].content == "第四个"
 
 
-async def test_problemset_operations_extended(init_database: AsyncDatabaseCore) -> None:
+async def test_problemset_operations_extended(
+    test_session_getter: SessionGetterType,
+) -> None:
     """测试问题集操作的扩展功能"""
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 创建多个问题集
         ps1_id, status1 = await create_problemset(session, "数学题库")
         ps2_id, status2 = await create_problemset(session, "英语题库")
         ps3_id, status3 = await create_problemset(session, "计算机题库")
         await session.commit()
 
-        assert status1 == ProblemSetCreateStatus.success
-        assert status2 == ProblemSetCreateStatus.success
-        assert status3 == ProblemSetCreateStatus.success
+        assert status1 == ProblemSetCreateStatus.SUCCESS
+        assert status2 == ProblemSetCreateStatus.SUCCESS
+        assert status3 == ProblemSetCreateStatus.SUCCESS
 
         # 为每个问题集添加不同数量的问题
         for ps_id, count in [(ps1_id, 10), (ps2_id, 5), (ps3_id, 15)]:
@@ -757,10 +740,12 @@ async def test_problemset_operations_extended(init_database: AsyncDatabaseCore) 
         assert "计算机题库" in remaining_names
 
 
-async def test_edge_cases_and_error_handling(init_database: AsyncDatabaseCore) -> None:
+async def test_edge_cases_and_error_handling(
+    test_session_getter: SessionGetterType,
+) -> None:
     """测试边界情况和错误处理"""
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 测试对不存在的问题集添加问题
         fake_problemset_id = uuid4()
         result = await add_problems(
@@ -796,10 +781,10 @@ async def test_edge_cases_and_error_handling(init_database: AsyncDatabaseCore) -
 
 
 async def test_problem_types_and_options(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试不同问题类型和选项配置"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 测试单选题（标准4选项）
         single_choice_id = await add_problems(
             session,
@@ -895,11 +880,11 @@ async def test_problem_types_and_options(
 
 
 async def test_performance_and_bulk_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试性能和批量操作"""
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 测试批量添加大量问题
         start_time = time.time()
 
@@ -963,11 +948,11 @@ async def test_performance_and_bulk_operations(
 
 
 async def test_database_transactions_and_rollback(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试数据库事务和回滚"""
     test_username = "Ayachi Nene"
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         with pytest.raises(IntegrityError):
             await _create_user_simple(session, test_username)
             # 预期出现用户重名错误
@@ -981,10 +966,10 @@ async def test_database_transactions_and_rollback(
 
 
 async def test_unicode_and_special_characters(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试Unicode和特殊字符处理"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 测试各种Unicode字符
         unicode_problems = [
             ProblemSubmit(
@@ -1051,11 +1036,11 @@ async def test_unicode_and_special_characters(
 
 
 async def test_database_integrity_and_relationships(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试数据库完整性和关系约束"""
 
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 添加一个问题
         problem_ids = await add_problems(
             session,
@@ -1099,10 +1084,10 @@ async def test_database_integrity_and_relationships(
 
 
 async def test_problem_sampling_variations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试问题抽样的各种情况"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 添加不同类型的问题
         mixed_problems = []
         for i in range(20):
@@ -1138,10 +1123,10 @@ async def test_problem_sampling_variations(
 
 
 async def test_complex_query_scenarios(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试复杂查询场景"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 创建复杂的测试数据
         complex_problems = [
             ProblemSubmit(
@@ -1214,10 +1199,10 @@ async def test_complex_query_scenarios(
 
 
 async def test_data_consistency_after_operations(
-    init_database: AsyncDatabaseCore, init_problemset_uuid: UUID
+    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试操作后的数据一致性"""
-    async with init_database.get_session() as session:
+    async with test_session_getter() as session:
         # 记录初始状态
         initial_count = await get_problem_count(session, init_problemset_uuid)
 

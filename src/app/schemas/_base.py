@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from pydantic import BaseModel, EmailStr
 
 from app.db.models import ProblemType

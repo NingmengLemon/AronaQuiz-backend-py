@@ -1,26 +1,22 @@
-import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import router as api_router
-from .api.deps import set_session_getter
-from .db.core import AsyncDatabaseCore
-from .db.models import TABLES
-
-DB_NAME = "arona_quiz"
+from app.api import deps
+from app.api import router as api_router
+from app.config import settings
+from app.db.utils import new_engine, new_session_getter
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-    os.makedirs("./data", exist_ok=True)
-    DATABASE_URL = f"sqlite+aiosqlite:///data/{DB_NAME}.db"  # 后续要改
-
-    async with AsyncDatabaseCore(DATABASE_URL, TABLES) as dbcore:
-        set_session_getter(dbcore.get_session)
-        yield
+    engine = new_engine(settings.database_url)
+    session_getter = new_session_getter(engine)
+    deps.session_getter = session_getter
+    yield
+    await engine.dispose()
 
 
 app = FastAPI(lifespan=lifespan)

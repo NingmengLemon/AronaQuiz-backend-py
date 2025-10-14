@@ -46,8 +46,8 @@ class UserStatResponse(BaseUser):
 
 
 class ProblemSetCreateStatus(StrEnum):
-    success = auto()
-    already_exists = auto()
+    SUCCESS = auto()
+    ALREADY_EXISTS = auto()
 
 
 class ProblemSetCreateResponse(BaseModel):

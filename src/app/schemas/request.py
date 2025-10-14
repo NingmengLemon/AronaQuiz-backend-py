@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel
 
 from ._base import BaseOption, BaseProblem, BaseProblemSet, BaseUser
@@ -26,4 +28,9 @@ class LoginByUsernameSubmit(BaseModel):
 
 class LoginByEmailSubmit(BaseModel):
     email: str
+    password: str
+
+
+class LoginByUserIdSubmit(BaseModel):
+    user_id: UUID
     password: str
