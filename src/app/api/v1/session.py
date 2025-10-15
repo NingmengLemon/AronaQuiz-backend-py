@@ -1,5 +1,4 @@
 from typing import Any, Literal
-from uuid import UUID
 
 from fastapi import APIRouter, Body, Header, HTTPException
 
@@ -9,6 +8,7 @@ from app.schemas.request import (
     LoginByEmailSubmit,
     LoginByUserIdSubmit,
     LoginByUsernameSubmit,
+    RefreshTokenSubmit,
 )
 from app.schemas.response import LoginSuccessResponse, RefreshTokenResponse
 
@@ -53,10 +53,14 @@ async def do_refresh_access_token(
     login_session: LoginRequired,
     db: DbSessionDep,
     _: Any = SpeedLimReqDep,
-    refresh_token: UUID = Body(),
+    submit: RefreshTokenSubmit = Body(),
 ) -> RefreshTokenResponse:
     if (
-        _ := refresh_access_token(db, login_session.access_token, refresh_token)
+        _ := await refresh_access_token(
+            db,
+            login_session.access_token,
+            submit.refresh_token,
+        )
     ) is None:
         raise HTTPException(401, "凭据错误")
 

@@ -106,9 +106,9 @@ class DBAnswerRecord(SQLModel, table=True):
 
 
 class LoginSessionStatus(StrEnum):
-    ACTIVE = auto()
-    REVOKED = auto()  # operated by user
-    KICKED = auto()  # operated by security sys & admin
+    ACTIVE = auto()  # session ok
+    REVOKED = auto()  # operated by user themselves
+    KICKED = auto()  # operated by security sys or admins
     EXPIRED = auto()  # also judged by <expires_at> field
     INVALID = auto()  # for other invalid conditions
 

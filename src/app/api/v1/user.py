@@ -84,7 +84,7 @@ async def get_myinfo(
     user = (
         await db.exec(select(DBUser).where(DBUser.id == login_session.user_id))
     ).one()
-    return SelfInfoResponse.model_validate(user)
+    return SelfInfoResponse.model_validate(user, from_attributes=True)
 
 
 @router.get("/info")
@@ -92,7 +92,7 @@ async def get_user_info(
     _: LoginRequired, db: DbSessionDep, user_id: UUID = Query()
 ) -> UserInfoResponse:
     user = (await db.exec(select(DBUser).where(DBUser.id == user_id))).one()
-    return UserInfoResponse.model_validate(user)
+    return UserInfoResponse.model_validate(user, from_attributes=True)
 
 
 @router.post("/delete")

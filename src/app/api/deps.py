@@ -60,7 +60,7 @@ async def _check_login(
     try:
         token = UUID(rawtoken)
     except Exception:
-        raise HTTPException(400, "凭据非法")
+        raise HTTPException(401, "凭据无效")
 
     session_status, login_session = await validate_login_session(
         session, access_token=token

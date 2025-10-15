@@ -34,3 +34,7 @@ class LoginByEmailSubmit(BaseModel):
 class LoginByUserIdSubmit(BaseModel):
     user_id: UUID
     password: str
+
+
+class RefreshTokenSubmit(BaseModel):
+    refresh_token: UUID

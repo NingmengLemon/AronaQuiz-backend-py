@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.deps import get_session_dependency
+from app.api import deps
 from app.config import INMEM_SQLITE_URL
 from app.db.utils import get_session, new_engine
 from app.main import app
@@ -37,7 +37,8 @@ async def test_client(test_engine: AsyncEngine) -> AsyncGenerator[AsyncClient, N
         async with get_session(test_engine) as session:
             yield session
 
-    app.dependency_overrides[get_session_dependency] = get_test_session_override
+    deps.speedlimiter = None
+    app.dependency_overrides[deps.get_session_dependency] = get_test_session_override
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
