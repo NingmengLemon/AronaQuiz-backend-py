@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -22,7 +22,7 @@ async def report_attempt(
     login_session: LoginRequired,
     problem_id: UUID = Body(),
     correct: bool = Body(),
-    time: datetime.datetime | None = Body(None),
+    time: datetime | None = Body(None),
 ) -> Literal["ok"]:
     # TODO: 返回上报后的统计数据
     user: DBUser | None = None

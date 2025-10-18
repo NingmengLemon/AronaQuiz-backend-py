@@ -15,6 +15,7 @@ from app.schemas.response import (
     ProblemSetResponse,
 )
 from app.typ import T
+from app.utils.misc import utcnow
 from app.utils.security import hash, sha256, verify
 
 from .models import (
@@ -274,7 +275,7 @@ async def report_attempt(
     record.total_count += 1
     if correct:
         record.correct_count += 1
-    record.last_attempt = time or datetime.now()
+    record.last_attempt = time or utcnow()
     session.add(record)
 
 
@@ -344,14 +345,14 @@ async def validate_login_session(
 
     if login_session.status == LoginSessionStatus.EXPIRED:
         return LoginSessionStatus.EXPIRED, None
-    if login_session.expires_at <= datetime.now():
+    if login_session.expires_at <= utcnow():
         if login_session.status == LoginSessionStatus.ACTIVE:
             login_session.status = LoginSessionStatus.EXPIRED
             session.add(login_session)
         return LoginSessionStatus.EXPIRED, None
 
     if login_session.status == LoginSessionStatus.ACTIVE:
-        login_session.last_active = datetime.now()
+        login_session.last_active = utcnow()
         session.add(login_session)
         return LoginSessionStatus.ACTIVE, login_session
 
@@ -373,7 +374,7 @@ async def refresh_access_token(
         return None
 
     new_access_token = login_session.access_token = uuid4()
-    login_session.last_renewal = datetime.now()
+    login_session.last_renewal = utcnow()
     login_session.expires_at = login_session.last_renewal + timedelta(
         days=ACCESS_TOKEN_LIFETIME
     )

@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import json
 import time
 from collections.abc import AsyncGenerator
@@ -36,6 +35,7 @@ from app.db.operations import (
 )
 from app.schemas.request import OptionSubmit, ProblemSubmit
 from app.typ import SessionGetterType
+from app.utils.misc import utcnow
 
 dotenv.load_dotenv()
 
@@ -513,7 +513,7 @@ async def test_answer_record_operations(
         await session.commit()
 
         # 测试报告答题尝试（正确）
-        test_time = datetime.datetime.now()
+        test_time = utcnow()
         await report_attempt(session, problem_id, user, correct=True, time=test_time)
 
         # 验证记录更新
