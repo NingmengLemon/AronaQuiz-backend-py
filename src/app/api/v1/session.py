@@ -4,13 +4,13 @@ from fastapi import APIRouter, Body, Header, HTTPException
 
 from app.api.deps import DbSessionDep, LoginRequired, SpeedLimReqDep
 from app.db.operations import login, logout, refresh_access_token
-from app.schemas.request import (
+from app.models.dto.request import (
     LoginByEmailSubmit,
     LoginByUserIdSubmit,
     LoginByUsernameSubmit,
     RefreshTokenSubmit,
 )
-from app.schemas.response import LoginSuccessResponse, RefreshTokenResponse
+from app.models.dto.response import LoginSuccessResponse, RefreshTokenResponse
 
 router = APIRouter(tags=["session"])
 

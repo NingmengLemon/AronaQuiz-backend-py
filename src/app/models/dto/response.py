@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.db.models import UserRole
+from app.models.db.db import UserRole
 
 from ._base import (
     BaseOption,

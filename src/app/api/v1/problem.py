@@ -5,7 +5,6 @@ from uuid import UUID
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from app.api.deps import DbSessionDep, LoginRequired, RequireRoles
-from app.db.models import UserRole
 from app.db.operations import (
     add_problems,
     create_problemset,
@@ -15,11 +14,12 @@ from app.db.operations import (
     sample,
     search_problem,
 )
-from app.schemas.request import (
+from app.models.db.db import UserRole
+from app.models.dto.request import (
     ProblemSetSubmit,
     ProblemSubmit,
 )
-from app.schemas.response import (
+from app.models.dto.response import (
     ProblemResponse,
     ProblemSetCreateResponse,
     ProblemSetResponse,

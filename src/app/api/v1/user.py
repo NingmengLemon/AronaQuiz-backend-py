@@ -9,10 +9,14 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.deps import DbSessionDep, LoginRequired, RequireRoles, SpeedLimReqDep
-from app.db.models import DBUser, UserRole
 from app.db.operations import create_user
-from app.schemas.request import UserRegisterSubmit
-from app.schemas.response import SelfInfoResponse, UserCreateResponse, UserInfoResponse
+from app.models.db.db import DBUser, UserRole
+from app.models.dto.request import UserRegisterSubmit
+from app.models.dto.response import (
+    SelfInfoResponse,
+    UserCreateResponse,
+    UserInfoResponse,
+)
 
 router = APIRouter(tags=["user"])
 USERNAME_REGEX = re.compile(r"^[A-Za-z0-9_\-]{3,16}$", re.U | re.I)

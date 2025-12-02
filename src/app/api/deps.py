@@ -10,7 +10,7 @@ from limits.aio.strategies import RateLimiter, SlidingWindowCounterRateLimiter
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db.models import DBUser, LoginSession, LoginSessionStatus, UserRole
+from app.models.db.db import DBUser, LoginSession, LoginSessionStatus, UserRole
 from app.db.operations import validate_login_session
 from app.utils.speedlimit import get_ipaddr, get_remote_address
 

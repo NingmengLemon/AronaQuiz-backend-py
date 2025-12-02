@@ -8,8 +8,8 @@ from sqlmodel import col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.decos import in_transaction
-from app.schemas.request import ProblemSubmit
-from app.schemas.response import (
+from app.models.dto.request import ProblemSubmit
+from app.models.dto.response import (
     ProblemResponse,
     ProblemSetCreateStatus,
     ProblemSetResponse,
@@ -18,7 +18,7 @@ from app.typ import T
 from app.utils.misc import utcnow
 from app.utils.security import hash, sha256, verify
 
-from .models import (
+from ..models.db.db import (
     ACCESS_TOKEN_LIFETIME,
     DBAnswerRecord,
     DBOption,

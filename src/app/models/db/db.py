@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta
+from collections.abc import Awaitable
+from datetime import datetime, timedelta, timezone
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Awaitable, Generic
+from typing import TYPE_CHECKING, Generic
 from uuid import UUID, uuid4
 
 from pydantic import EmailStr
-from sqlalchemy import PrimaryKeyConstraint
+from sqlalchemy import Column, DateTime, PrimaryKeyConstraint
 from sqlalchemy.ext.asyncio.session import AsyncAttrs as _AsyncAttrs
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -103,7 +104,10 @@ class DBAnswerRecord(SQLModel, table=True):
 
     correct_count: int = 0
     total_count: int = 0
-    last_attempt: datetime = Field(default_factory=lambda: datetime.fromtimestamp(0))
+    last_attempt: datetime = Field(
+        default_factory=lambda: datetime.fromtimestamp(0, timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
 
 class LoginSessionStatus(StrEnum):
@@ -121,16 +125,29 @@ class LoginSession(SQLModel, table=True):
     access_token: UUID = Field(default_factory=uuid4)
     user_id: UUID = Field(foreign_key="user.id")
 
-    expires_at: datetime = Field(default_factory=lambda: utcnow() + timedelta(days=30))
-    created_at: datetime = Field(default_factory=utcnow)
-    last_renewal: datetime = Field(default_factory=utcnow)
-    last_active: datetime = Field(default_factory=utcnow)
+    expires_at: datetime = Field(
+        default_factory=lambda: utcnow() + timedelta(days=30),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    created_at: datetime = Field(
+        default_factory=utcnow,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    last_renewal: datetime = Field(
+        default_factory=utcnow,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    last_active: datetime = Field(
+        default_factory=utcnow,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
     status: LoginSessionStatus = LoginSessionStatus.ACTIVE
 
     device_info: str = ""
     refresh_token_hash: str
     refresh_token_expires_at: datetime = Field(
-        default_factory=lambda: utcnow() + timedelta(days=120)
+        default_factory=lambda: utcnow() + timedelta(days=120),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     # refresh token rotate 时, 创建一个新的 session, 将当前 session 设为 expired
     # 定期移除过旧的过期的 session

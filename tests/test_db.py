@@ -10,15 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db.models import (
-    TABLES,
-    DBOption,
-    DBProblem,
-    DBUser,
-    ProblemType,
-)
 from app.db.operations import (
-    ProblemSetCreateStatus,
     add_problems,
     create_problemset,
     create_user,
@@ -33,7 +25,15 @@ from app.db.operations import (
     sample,
     search_problem,
 )
-from app.schemas.request import OptionSubmit, ProblemSubmit
+from app.models.db.db import (
+    TABLES,
+    DBOption,
+    DBProblem,
+    DBUser,
+    ProblemType,
+)
+from app.models.dto.request import OptionSubmit, ProblemSubmit
+from app.models.dto.response import ProblemSetCreateStatus
 from app.typ import SessionGetterType
 from app.utils.misc import utcnow
 

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 
-from app.db.models import ProblemType
+from app.models.db.db import ProblemType
 
 
 class BaseOption(BaseModel):

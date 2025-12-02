@@ -6,9 +6,9 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel import delete
 
-from app.db.models import TABLES, UserRole
 from app.db.operations import create_user
-from app.schemas.response import ProblemSetCreateStatus
+from app.models.db.db import TABLES, UserRole
+from app.models.dto.response import ProblemSetCreateStatus
 from app.typ import SessionGetterType
 
 
