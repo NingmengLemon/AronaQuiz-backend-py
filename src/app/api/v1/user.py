@@ -8,8 +8,13 @@ from pydantic_core import PydanticCustomError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.deps import DbSessionDep, LoginRequired, RequireRoles, SpeedLimReqDep
-from app.db.operations import create_user
+from app.api.deps import (
+    DbSessionDep,
+    LoginRequired,
+    RequireRoles,
+    SpeedLimReqDep,
+)
+from app.services.operations import create_user
 from app.models.db.db import DBUser, UserRole
 from app.models.dto.request import UserRegisterSubmit
 from app.models.dto.response import (

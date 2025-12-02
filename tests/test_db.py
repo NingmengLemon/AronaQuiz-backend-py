@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db.operations import (
+from app.services.operations import (
     add_problems,
     create_problemset,
     create_user,

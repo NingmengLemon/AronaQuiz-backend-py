@@ -6,8 +6,8 @@ from fastapi import APIRouter, Body, HTTPException
 
 from app.api.deps import DbSessionDep, LoginRequired
 from app.models.db.db import DBUser
-from app.db.operations import query_problem, query_user
-from app.db.operations import report_attempt as report_attempt_db
+from app.services.operations import query_problem, query_user
+from app.services.operations import report_attempt as report_attempt_db
 
 router = APIRouter(tags=["stat"])
 

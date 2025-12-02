@@ -11,7 +11,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.db import DBUser, LoginSession, LoginSessionStatus, UserRole
-from app.db.operations import validate_login_session
+from app.services.operations import validate_login_session
 from app.utils.speedlimit import get_ipaddr, get_remote_address
 
 # global vars for injection
@@ -24,7 +24,8 @@ async def get_session_dependency() -> AsyncGenerator[AsyncSession, None]:
     if session_getter is None:
         raise RuntimeError("inject session_getter first")
     async with session_getter() as session:
-        yield session
+        async with session.begin():
+            yield session
 
 
 DbSessionDep = Annotated[AsyncSession, Depends(get_session_dependency)]

@@ -21,6 +21,7 @@ async def auto_begin(
     async with (session.begin_nested if nested else session.begin)() as t:
         try:
             yield t
+            await t.commit()
         except Exception:
             if auto_rollback:
                 await session.rollback()

@@ -9,9 +9,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api import deps
 from app.config import INMEM_SQLITE_URL
-from app.db.utils import get_session, new_engine
 from app.main import app
 from app.typ import SessionGetterType
+from app.utils.db.utils import get_session, new_engine
 
 
 @pytest.fixture(scope="module", autouse=True, name="test_engine")

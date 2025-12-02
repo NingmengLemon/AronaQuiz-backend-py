@@ -5,7 +5,6 @@ from typing import Concatenate, Protocol
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.db.utils import auto_begin
 from app.typ import AsyncCallable, P, T, T_co
 
 
@@ -28,16 +27,20 @@ class DatabaseAsyncCallable(Protocol[P, T_co]):
     ) -> Awaitable[T_co]: ...
 
 
-def in_transaction(
-    auto_rollback: bool = True,
-) -> Callable[[DatabaseAsyncCallable[P, T]], DatabaseAsyncCallable[P, T]]:
+def in_transaction() -> Callable[
+    [DatabaseAsyncCallable[P, T]], DatabaseAsyncCallable[P, T]
+]:
     def deco(func: DatabaseAsyncCallable[P, T]) -> DatabaseAsyncCallable[P, T]:
         @functools.wraps(func)
         async def wrapped(
             session: AsyncSession, *args: P.args, **kwargs: P.kwargs
         ) -> T:
-            async with auto_begin(session, auto_rollback=auto_rollback):
-                return await func(session, *args, **kwargs)
+            async with (
+                session.begin_nested if session.in_transaction() else session.begin
+            )() as transaction:
+                rv = await func(session, *args, **kwargs)
+                await transaction.commit()
+                return rv
 
         return wrapped
 

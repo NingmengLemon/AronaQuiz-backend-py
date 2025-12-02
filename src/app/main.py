@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import deps
 from app.api import router as api_router
 from app.config import settings
-from app.db.utils import new_engine, new_session_getter
+from app.utils.db.utils import new_engine, new_session_getter
 
 
 @asynccontextmanager

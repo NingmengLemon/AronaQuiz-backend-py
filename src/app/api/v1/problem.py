@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from app.api.deps import DbSessionDep, LoginRequired, RequireRoles
-from app.db.operations import (
+from app.services.operations import (
     add_problems,
     create_problemset,
     delete_problems,
