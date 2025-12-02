@@ -16,8 +16,8 @@ from alembic import context
 sys.path.append(str(Path(__file__).resolve().parents[2] / "src"))
 
 from app.config import settings
-from app.db.utils import new_engine
 from app.models.db.db import SQLModel
+from app.utils.db.utils import new_engine
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
