@@ -7,11 +7,13 @@ from uuid import UUID, uuid4
 from pydantic import EmailStr
 from sqlalchemy import Column, DateTime, PrimaryKeyConstraint
 from sqlalchemy.ext.asyncio.session import AsyncAttrs as _AsyncAttrs
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship
 
 from app.typ import T
 from app.utils.misc import utcnow
 from app.utils.uuid7 import uuid7
+
+from .base import Base
 
 ACCESS_TOKEN_LIFETIME = 14  # days
 REFRESH_TOKEN_LIFETIME = 120  # days
@@ -31,8 +33,8 @@ class _OptionAsyncAttrs:
     problem: Awaitable["DBProblem"]
 
 
-class DBOption(SQLModel, AsyncAttrs[_OptionAsyncAttrs], table=True):
-    __tablename__ = "option"  # type: ignore
+class DBOption(Base, AsyncAttrs[_OptionAsyncAttrs], table=True):
+    __tablename__ = "option"
     id: UUID = Field(default_factory=uuid7, primary_key=True)
     order: int
     content: str
@@ -50,8 +52,8 @@ class _ProblemAsyncAttrs:
     problemset: Awaitable["DBProblemSet"]
 
 
-class DBProblem(SQLModel, AsyncAttrs[_ProblemAsyncAttrs], table=True):
-    __tablename__ = "problem"  # type: ignore
+class DBProblem(Base, AsyncAttrs[_ProblemAsyncAttrs], table=True):
+    __tablename__ = "problem"
     id: UUID = Field(default_factory=uuid7, primary_key=True)
     content: str
     type: ProblemType
@@ -68,8 +70,8 @@ class _ProblemSetAsyncAttrs:
     problems: Awaitable[list[DBProblem]]
 
 
-class DBProblemSet(SQLModel, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
-    __tablename__ = "problemset"  # type: ignore
+class DBProblemSet(Base, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
+    __tablename__ = "problemset"
     id: UUID = Field(default_factory=uuid7, primary_key=True)
     name: str
 
@@ -85,8 +87,8 @@ class UserRole(StrEnum):
     SU = auto()  # permission level: max
 
 
-class DBUser(SQLModel, table=True):
-    __tablename__ = "user"  # type: ignore
+class DBUser(Base, table=True):
+    __tablename__ = "user"
     # 所有属性都无需二次 await 所以没写
     id: UUID = Field(default_factory=uuid7, primary_key=True)
     email: EmailStr = Field(unique=True)
@@ -96,8 +98,8 @@ class DBUser(SQLModel, table=True):
     role: UserRole = UserRole.USER
 
 
-class DBAnswerRecord(SQLModel, table=True):
-    __tablename__ = "answer_record"  # type: ignore
+class DBAnswerRecord(Base, table=True):
+    __tablename__ = "answer_record"
     __table_args__ = (PrimaryKeyConstraint("user_id", "problem_id"),)
     user_id: UUID = Field(foreign_key="user.id")
     problem_id: UUID = Field(foreign_key="problem.id")
@@ -118,8 +120,8 @@ class LoginSessionStatus(StrEnum):
     INVALID = auto()  # for other invalid conditions
 
 
-class LoginSession(SQLModel, table=True):
-    __tablename__ = "login_session"  # type: ignore
+class LoginSession(Base, table=True):
+    __tablename__ = "login_session"
     id: UUID = Field(default_factory=uuid7, primary_key=True)
 
     access_token: UUID = Field(default_factory=uuid4)
@@ -151,16 +153,3 @@ class LoginSession(SQLModel, table=True):
     )
     # refresh token rotate 时, 创建一个新的 session, 将当前 session 设为 expired
     # 定期移除过旧的过期的 session
-
-
-TABLES = [
-    SQLModel.metadata.tables[t.__tablename__]  # type: ignore
-    for t in (
-        DBOption,
-        DBProblem,
-        DBProblemSet,
-        DBUser,
-        DBAnswerRecord,
-        LoginSession,
-    )
-]

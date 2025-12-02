@@ -3,7 +3,7 @@ from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from typing import Any, Concatenate
 
-from sqlalchemy import URL
+from sqlalchemy import URL, Connection, Table, inspect
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.ext.asyncio.session import AsyncSessionTransaction
 from sqlalchemy.orm import Session
@@ -72,3 +72,13 @@ def new_session_getter(
 
 def new_engine(url: str | URL, echo: bool = False, **kwargs: Any) -> AsyncEngine:
     return create_async_engine(url, echo=echo, **kwargs)
+
+
+def check_table_existence_sync(conn: Connection, table: Table) -> bool:
+    return inspect(conn).has_table(table_name=table.name, schema=table.schema)
+
+
+async def check_table_existence(session: AsyncSession, table: Table) -> bool:
+    async_conn = await session.connection()
+    existence = await async_conn.run_sync(check_table_existence_sync, table=table)
+    return existence

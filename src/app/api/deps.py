@@ -24,8 +24,9 @@ async def get_session_dependency() -> AsyncGenerator[AsyncSession, None]:
     if session_getter is None:
         raise RuntimeError("inject session_getter first")
     async with session_getter() as session:
-        async with session.begin():
-            yield session
+        # async with session.begin():
+        yield session
+        await session.commit()
 
 
 DbSessionDep = Annotated[AsyncSession, Depends(get_session_dependency)]

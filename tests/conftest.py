@@ -4,12 +4,12 @@ from collections.abc import AsyncGenerator
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
-from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api import deps
 from app.config import INMEM_SQLITE_URL
 from app.main import app
+from app.models.db.base import arona_metadata
 from app.typ import SessionGetterType
 from app.utils.db.utils import get_session, new_engine
 
@@ -18,10 +18,10 @@ from app.utils.db.utils import get_session, new_engine
 async def test_engine() -> AsyncGenerator[AsyncEngine]:
     engine = new_engine(INMEM_SQLITE_URL)
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(arona_metadata.create_all)
     yield engine
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(arona_metadata.drop_all)
 
 
 @pytest.fixture(scope="module")

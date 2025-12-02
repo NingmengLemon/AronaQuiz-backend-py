@@ -1,14 +1,15 @@
-from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlmodel import delete
 
-from app.services.operations import create_user
-from app.models.db.db import TABLES, UserRole
+from app.models.db.base import arona_metadata
+from app.models.db.db import UserRole
 from app.models.dto.response import ProblemSetCreateStatus
+from app.services.operations import create_user
 from app.typ import SessionGetterType
 
 
@@ -26,14 +27,15 @@ PROBLEMSET_NAME_FOR_TEST = "Generic Problemset"
 @pytest.fixture(scope="function")
 async def setup_test_data(
     test_session_getter: SessionGetterType,
-) -> AsyncGenerator[PreparedTestData, None]:
+) -> PreparedTestData:
     """为每个测试准备数据"""
     async with test_session_getter() as session:
         # 清理现有数据
-        for table in TABLES:
+        for table in arona_metadata.tables.values():
             await session.exec(delete(table))  # type: ignore
         await session.commit()
 
+    async with test_session_getter() as session:
         # 创建测试用户
         common_user_id = await create_user(
             session,
@@ -55,19 +57,20 @@ async def setup_test_data(
             session,
             "superuser",
             email="su@example.com",
-            nickname="萝莉超管卡瓦",
+            nickname="卡瓦萝莉超管",
             password=PASSWORD_FOR_TEST,
             role=UserRole.SU,
         )
+        await session.commit()
 
-    yield PreparedTestData(
+    return PreparedTestData(
         common_user_id,
         admin_id,
         su_id,
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 async def cu_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
@@ -80,7 +83,7 @@ async def cu_auth_headers(
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 async def su_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
@@ -93,7 +96,7 @@ async def su_auth_headers(
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 async def admin_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
@@ -106,7 +109,7 @@ async def admin_auth_headers(
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 async def test_problemset(
     test_client: AsyncClient,
     admin_auth_headers: dict[str, str],

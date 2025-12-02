@@ -10,6 +10,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.models.db.base import arona_metadata
+from app.models.db.db import (
+    DBOption,
+    DBProblem,
+    DBUser,
+    ProblemType,
+)
+from app.models.dto.request import OptionSubmit, ProblemSubmit
+from app.models.dto.response import ProblemSetCreateStatus
 from app.services.operations import (
     add_problems,
     create_problemset,
@@ -25,15 +34,6 @@ from app.services.operations import (
     sample,
     search_problem,
 )
-from app.models.db.db import (
-    TABLES,
-    DBOption,
-    DBProblem,
-    DBUser,
-    ProblemType,
-)
-from app.models.dto.request import OptionSubmit, ProblemSubmit
-from app.models.dto.response import ProblemSetCreateStatus
 from app.typ import SessionGetterType
 from app.utils.misc import utcnow
 
@@ -47,7 +47,7 @@ async def init_problemset_uuid(
     test_session_getter: SessionGetterType,
 ) -> AsyncGenerator[UUID, None]:
     async with test_session_getter() as session:
-        for table in TABLES:
+        for table in arona_metadata.tables.values():
             await session.exec(delete(table))  # type: ignore
         await session.flush()
         id_, _ = await create_problemset(session, "test")
@@ -59,7 +59,7 @@ async def _create_user_simple(session: AsyncSession, username: str) -> UUID:
     return await create_user(
         session,
         username,
-        email="email@example.com",
+        email=f"{username.lower().replace(' ', '')}@example.com",
         nickname=username,
         password="114514",
     )
@@ -953,11 +953,15 @@ async def test_database_transactions_and_rollback(
     """测试数据库事务和回滚"""
     test_username = "Ayachi Nene"
     async with test_session_getter() as session:
+        await _create_user_simple(session, test_username)
+        await session.commit()
+
+    async with test_session_getter() as session:
         with pytest.raises(IntegrityError):
-            await _create_user_simple(session, test_username)
             # 预期出现用户重名错误
             await _create_user_simple(session, test_username)
 
+    async with test_session_getter() as session:
         users = (
             await session.exec(select(DBUser).where(DBUser.username == test_username))
         ).all()
