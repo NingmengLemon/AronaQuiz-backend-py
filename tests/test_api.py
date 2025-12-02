@@ -1,9 +1,9 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlmodel import delete
 
 from app.models.db.base import arona_metadata
@@ -11,6 +11,8 @@ from app.models.db.db import UserRole
 from app.models.dto.response import ProblemSetCreateStatus
 from app.services.operations import create_user
 from app.typ import SessionGetterType
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -28,7 +30,7 @@ PROBLEMSET_NAME_FOR_TEST = "Generic Problemset"
 async def setup_test_data(
     test_session_getter: SessionGetterType,
 ) -> PreparedTestData:
-    """为每个测试准备数据"""
+    logger.info("Setting up test data fixture.")
     async with test_session_getter() as session:
         # 清理现有数据
         for table in arona_metadata.tables.values():
@@ -63,6 +65,7 @@ async def setup_test_data(
         )
         await session.commit()
 
+    logger.info("Test data fixture setup complete.")
     return PreparedTestData(
         common_user_id,
         admin_id,
@@ -74,12 +77,14 @@ async def setup_test_data(
 async def cu_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
+    logger.info("Setting up common user auth headers fixture.")
     resp = await test_client.post(
         "/api/v1/session/login",
         json={"user_id": str(setup_test_data.cuid), "password": PASSWORD_FOR_TEST},
     )
     result = resp.json()
     assert resp.status_code == 200, result
+    logger.info("Common user auth headers fixture setup complete.")
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
@@ -87,12 +92,14 @@ async def cu_auth_headers(
 async def su_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
+    logger.info("Setting up superuser auth headers fixture.")
     resp = await test_client.post(
         "/api/v1/session/login",
         json={"user_id": str(setup_test_data.suid), "password": PASSWORD_FOR_TEST},
     )
     result = resp.json()
     assert resp.status_code == 200, result
+    logger.info("Superuser auth headers fixture setup complete.")
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
@@ -100,12 +107,14 @@ async def su_auth_headers(
 async def admin_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
+    logger.info("Setting up admin auth headers fixture.")
     resp = await test_client.post(
         "/api/v1/session/login",
         json={"user_id": str(setup_test_data.auid), "password": PASSWORD_FOR_TEST},
     )
     result = resp.json()
     assert resp.status_code == 200, result
+    logger.info("Admin auth headers fixture setup complete.")
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
@@ -114,6 +123,7 @@ async def test_problemset(
     test_client: AsyncClient,
     admin_auth_headers: dict[str, str],
 ) -> UUID:
+    logger.info("Setting up test problem set fixture.")
     # 虽然有点不正式但是这里隐式包含了创建问题集的测试
     # 所以后面大概就不用写了 (x)
     resp = await test_client.post(
@@ -123,6 +133,7 @@ async def test_problemset(
     )
     result = resp.json()
     assert resp.status_code == 200, result
+    logger.info("Test problem set fixture setup complete.")
     return UUID(result["id"])
 
 

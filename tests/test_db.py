@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import time
 from collections.abc import AsyncGenerator
 from uuid import UUID, uuid4
@@ -41,17 +42,21 @@ dotenv.load_dotenv()
 
 DB_NAME = "test_dbopts"
 
+logger = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="function")
 async def init_problemset_uuid(
     test_session_getter: SessionGetterType,
 ) -> AsyncGenerator[UUID, None]:
+    logger.info("Initializing problem set UUID fixture.")
     async with test_session_getter() as session:
         for table in arona_metadata.tables.values():
             await session.exec(delete(table))  # type: ignore
         await session.flush()
         id_, _ = await create_problemset(session, "test")
         await session.commit()
+    logger.info("Problem set UUID fixture initialized.")
     yield id_
 
 
