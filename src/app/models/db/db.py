@@ -57,7 +57,9 @@ class DBProblem(Base, AsyncAttrs[_ProblemAsyncAttrs], table=True):
     content: str
     type: ProblemType
 
-    problemset_id: UUID = Field(foreign_key="problemset.id")
+    problemset_id: UUID = Field(
+        sa_column=Column(Uuid, ForeignKey("problemset.id", ondelete="CASCADE"))
+    )
     problemset: "DBProblemSet" = Relationship(back_populates="problems")
     options: list[DBOption] = Relationship(
         back_populates="problem",
