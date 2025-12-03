@@ -37,7 +37,6 @@ def queryable(o: T) -> QueryableAttribute[T]:
     return cast(QueryableAttribute, o)
 
 
-@in_transaction()
 async def create_problemset(
     session: AsyncSession, name: str
 ) -> tuple[UUID, ProblemSetCreateStatus]:
@@ -50,10 +49,10 @@ async def create_problemset(
     problemset = DBProblemSet(name=name, problems=[])
     session.add(problemset)
     await session.flush()
+    await session.commit()
     return problemset.id, ProblemSetCreateStatus.SUCCESS
 
 
-@in_transaction()
 async def add_problems(
     session: AsyncSession, problemset_id: UUID, *problems: ProblemSubmit
 ) -> list[UUID] | None:
@@ -81,6 +80,7 @@ async def add_problems(
         session.add_all([problem_db, *options_db])
         added_ids.append(problem_id)
     await session.flush()
+    await session.commit()
     return added_ids
 
 
@@ -134,7 +134,6 @@ async def search_problem(
     return result
 
 
-@in_transaction()
 async def delete_problems(
     session: AsyncSession,
     *problem_ids: UUID,
@@ -146,9 +145,9 @@ async def delete_problems(
     stmt = stmt.where(col(DBOption.problem_id).in_(problem_ids))
     await session.exec(stmt)  # type: ignore
     await session.flush()
+    await session.commit()
 
 
-@in_transaction()
 async def delete_problemset(session: AsyncSession, problemset_id: UUID) -> None | UUID:
     problemset = (
         await session.exec(select(DBProblemSet).where(DBProblemSet.id == problemset_id))
@@ -160,6 +159,7 @@ async def delete_problemset(session: AsyncSession, problemset_id: UUID) -> None 
         delete(DBProblem).where(col(DBProblem.problemset_id) == problemset_id)  # type: ignore
     )
     await session.flush()
+    await session.commit()
     return problemset_id
 
 
@@ -234,7 +234,6 @@ async def query_user(
     ).one_or_none()
 
 
-@in_transaction()
 async def create_user(
     session: AsyncSession,
     username: str,
@@ -254,6 +253,7 @@ async def create_user(
     session.add(user)
     await session.flush()
     await session.refresh(user)
+    await session.commit()
     return user.id
 
 
@@ -294,7 +294,6 @@ async def query_statistic(
     raise NotImplementedError
 
 
-@in_transaction()
 async def login(
     session: AsyncSession,
     *,
@@ -324,7 +323,7 @@ async def login(
     )
     session.add(new_session)
     await session.flush()
-    # await session.commit()
+    await session.commit()
     return new_session.access_token, refresh_token
 
 
@@ -343,7 +342,6 @@ async def query_login_session(
     return (await session.exec(select(LoginSession).where(cond))).one_or_none()
 
 
-@in_transaction()
 async def validate_login_session(
     session: AsyncSession, access_token: UUID
 ) -> tuple[LoginSessionStatus, LoginSession | None]:
@@ -359,18 +357,19 @@ async def validate_login_session(
             login_session.status = LoginSessionStatus.EXPIRED
             session.add(login_session)
             await session.flush()
+            await session.commit()
         return LoginSessionStatus.EXPIRED, None
 
     if login_session.status == LoginSessionStatus.ACTIVE:
         login_session.last_active = now
         session.add(login_session)
         await session.flush()
+        await session.commit()
         return LoginSessionStatus.ACTIVE, login_session
 
     return LoginSessionStatus.INVALID, None
 
 
-@in_transaction()
 async def refresh_access_token(
     session: AsyncSession, access_token: UUID, refresh_token: UUID
 ) -> tuple[UUID, UUID | None] | None:
@@ -391,10 +390,10 @@ async def refresh_access_token(
     )
     session.add(login_session)
     await session.flush()
+    await session.commit()
     return new_access_token, None
 
 
-@in_transaction()
 async def logout(session: AsyncSession, access_token: UUID) -> bool:
     login_session = (
         await session.exec(
@@ -406,4 +405,5 @@ async def logout(session: AsyncSession, access_token: UUID) -> bool:
     login_session.status = LoginSessionStatus.REVOKED
     session.add(login_session)
     await session.flush()
+    await session.commit()
     return True
