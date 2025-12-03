@@ -5,7 +5,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from argon2.profiles import RFC_9106_LOW_MEMORY
 
-from .decos import in_thread
+from .misc import in_thread
 
 hasher = PasswordHasher.from_parameters(RFC_9106_LOW_MEMORY)
 

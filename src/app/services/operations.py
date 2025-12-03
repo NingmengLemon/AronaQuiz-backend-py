@@ -14,7 +14,7 @@ from app.models.dto.response import (
     ProblemSetResponse,
 )
 from app.typ import T
-from app.utils.db.decos import in_transaction
+from app.utils.db import in_transaction
 from app.utils.misc import utcnow
 from app.utils.security import hash, sha256, verify
 

@@ -17,7 +17,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2] / "src"))
 
 from app.config import get_settings
 from app.models.db.base import arona_metadata
-from app.utils.db.utils import new_engine
+from app.utils.db import new_engine
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

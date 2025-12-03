@@ -14,7 +14,7 @@ from app.main import app
 from app.models.db.base import arona_metadata
 from app.models.db.db import DBProblem, DBProblemSet, DBUser
 from app.typ import SessionGetterType
-from app.utils.db.utils import get_session, new_engine
+from app.utils.db import get_session, new_engine
 
 logger = logging.getLogger(__name__)
 
