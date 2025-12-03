@@ -11,9 +11,10 @@ from pydantic_settings import (
 )
 from sqlalchemy import URL
 
+DRIVERNAME = "postgresql+asyncpg"
+
 
 class DatabaseConfig(BaseModel):
-    drivername: str = "postgresql+asyncpg"
     username: str | None = None
     password: str | None = None
     host: str | None = None
@@ -38,12 +39,22 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> Secret[URL]:
-        return Secret(URL.create(**self.database.get_secret_value().model_dump()))
+        return Secret(
+            URL.create(
+                drivername=DRIVERNAME,
+                **self.database.get_secret_value().model_dump(),
+            )
+        )
 
     @property
     def test_database_url(self) -> Secret[URL] | None:
         if db := self.test_database.get_secret_value():
-            return Secret(URL.create(**db.model_dump()))
+            return Secret(
+                URL.create(
+                    drivername=DRIVERNAME,
+                    **db.model_dump(),
+                ),
+            )
         return None
 
     @classmethod

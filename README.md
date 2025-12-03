@@ -20,11 +20,8 @@
    uv sync --no-dev
    ```
 
-4. Configure database url. For example, write `.env` like this:
-
-   ```dotenv
-   database_url=sqlite+aiosqlite:///database.db
-   ```
+4. Configure database. Write a `arona_config.toml` (or `.yaml`), and place it in the root folder of proj.
+   See `arona_config.example.toml` for example.
 
 5. Migrate or init database:
 
@@ -57,6 +54,8 @@ Serve yourself to add more args & settings
    ```
 
    > `data/example_data.*` are provided as test materials.
+   >
+   > You need to fill `[test_database]` in the config file to start test.
 
 - Create an alembic revision:
 
