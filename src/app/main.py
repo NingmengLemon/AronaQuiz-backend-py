@@ -6,13 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import deps
 from app.api import router as api_router
-from app.config import settings
+from app.config import get_settings
 from app.utils.db.utils import new_engine, new_session_getter
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-    engine = new_engine(settings.database_url)
+    engine = new_engine(get_settings().database_url.get_secret_value())
     session_getter = new_session_getter(engine)
     deps.session_getter = session_getter
     yield

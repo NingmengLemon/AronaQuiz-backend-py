@@ -5,16 +5,16 @@ import time
 from collections.abc import AsyncGenerator
 from uuid import UUID, uuid4
 
-import dotenv
 import pytest
+import pytest_asyncio
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.db.base import arona_metadata
 from app.models.db.db import (
     DBOption,
     DBProblem,
+    DBProblemSet,
     DBUser,
     ProblemType,
 )
@@ -38,21 +38,18 @@ from app.services.operations import (
 from app.typ import SessionGetterType
 from app.utils.misc import utcnow
 
-dotenv.load_dotenv()
-
 DB_NAME = "test_dbopts"
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def init_problemset_uuid(
     test_session_getter: SessionGetterType,
 ) -> AsyncGenerator[UUID, None]:
     logger.info("Initializing problem set UUID fixture.")
     async with test_session_getter() as session:
-        for table in arona_metadata.tables.values():
-            await session.exec(delete(table))  # type: ignore
+        await session.exec(delete(DBProblemSet))  # type: ignore
         await session.flush()
         id_, _ = await create_problemset(session, "test")
         await session.commit()
@@ -70,6 +67,7 @@ async def _create_user_simple(session: AsyncSession, username: str) -> UUID:
     )
 
 
+@pytest.mark.asyncio
 async def test_add(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -100,6 +98,7 @@ async def test_add(
         assert options[0].content == "2034324"
 
 
+@pytest.mark.asyncio
 async def test_multiadd(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -157,6 +156,7 @@ async def test_multiadd(
         assert (await get_problem_count(session)) == len(problems) + additional
 
 
+@pytest.mark.asyncio
 async def test_query_problem(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -197,6 +197,7 @@ async def test_query_problem(
         assert non_existent_problem is None
 
 
+@pytest.mark.asyncio
 async def test_search_problem(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -252,6 +253,7 @@ async def test_search_problem(
         assert results_page1 + results_page2 == results
 
 
+@pytest.mark.asyncio
 async def test_delete_problems(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -303,6 +305,7 @@ async def test_delete_problems(
         assert await get_problem_count(session) == 0
 
 
+@pytest.mark.asyncio
 async def test_sample_problems(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -341,6 +344,7 @@ async def test_sample_problems(
         assert len(all_problems) == 50  # 应该返回所有问题
 
 
+@pytest.mark.asyncio
 async def test_multi_select_problem(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -379,6 +383,7 @@ async def test_multi_select_problem(
         assert correct_contents == {"Python", "Java", "C++"}
 
 
+@pytest.mark.asyncio
 async def test_search_edge_cases(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -410,6 +415,7 @@ async def test_search_edge_cases(
         assert len(case_insensitive_results) == 1  # 应该能找到"测试"
 
 
+@pytest.mark.asyncio
 async def test_problem_count(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -450,6 +456,7 @@ async def test_problem_count(
         assert await get_problem_count(session) == 0
 
 
+@pytest.mark.asyncio
 async def test_problemset(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -468,6 +475,7 @@ async def test_problemset(
         assert id__ is not None
 
 
+@pytest.mark.asyncio
 async def test_user_operations(test_session_getter: SessionGetterType) -> None:
     """测试用户相关操作"""
 
@@ -491,6 +499,7 @@ async def test_user_operations(test_session_getter: SessionGetterType) -> None:
         assert non_existent_user is None
 
 
+@pytest.mark.asyncio
 async def test_answer_record_operations(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -533,6 +542,7 @@ async def test_answer_record_operations(
             await report_attempt(session, problem_id, user, correct=i % 2 == 0)
 
 
+@pytest.mark.asyncio
 async def test_advanced_search_operations(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -604,6 +614,7 @@ async def test_advanced_search_operations(
             all_ids.add(p.id)
 
 
+@pytest.mark.asyncio
 async def test_concurrent_operations(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -639,6 +650,7 @@ async def test_concurrent_operations(
         assert total_count == 50  # 5个批次，每批10个问题
 
 
+@pytest.mark.asyncio
 async def test_data_validation_and_constraints(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -690,6 +702,7 @@ async def test_data_validation_and_constraints(
         assert sorted_options[3].content == "第四个"
 
 
+@pytest.mark.asyncio
 async def test_problemset_operations_extended(
     test_session_getter: SessionGetterType,
 ) -> None:
@@ -745,6 +758,7 @@ async def test_problemset_operations_extended(
         assert "计算机题库" in remaining_names
 
 
+@pytest.mark.asyncio
 async def test_edge_cases_and_error_handling(
     test_session_getter: SessionGetterType,
 ) -> None:
@@ -785,6 +799,7 @@ async def test_edge_cases_and_error_handling(
         assert count == 0
 
 
+@pytest.mark.asyncio
 async def test_problem_types_and_options(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -884,6 +899,7 @@ async def test_problem_types_and_options(
         assert correct_count == 5  # 0, 2, 4, 6, 8
 
 
+@pytest.mark.asyncio
 async def test_performance_and_bulk_operations(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -952,6 +968,7 @@ async def test_performance_and_bulk_operations(
         assert remaining_count == 50
 
 
+@pytest.mark.asyncio
 async def test_database_transactions_and_rollback(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -974,6 +991,7 @@ async def test_database_transactions_and_rollback(
         assert users[0].username == test_username
 
 
+@pytest.mark.asyncio
 async def test_unicode_and_special_characters(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -1044,6 +1062,7 @@ async def test_unicode_and_special_characters(
             assert len(retrieved_problem.options) > 0
 
 
+@pytest.mark.asyncio
 async def test_database_integrity_and_relationships(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -1092,6 +1111,7 @@ async def test_database_integrity_and_relationships(
         assert len(remaining_options) == 0
 
 
+@pytest.mark.asyncio
 async def test_problem_sampling_variations(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -1131,6 +1151,7 @@ async def test_problem_sampling_variations(
             assert len(sampled) == expected_size
 
 
+@pytest.mark.asyncio
 async def test_complex_query_scenarios(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
@@ -1207,6 +1228,7 @@ async def test_complex_query_scenarios(
             assert len(last_page_results) == last_page_size
 
 
+@pytest.mark.asyncio
 async def test_data_consistency_after_operations(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:

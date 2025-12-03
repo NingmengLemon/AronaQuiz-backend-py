@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Generic
 from uuid import UUID, uuid4
 
 from pydantic import EmailStr
-from sqlalchemy import Column, DateTime, PrimaryKeyConstraint
+from sqlalchemy import Column, DateTime, ForeignKey, PrimaryKeyConstraint, Uuid
 from sqlalchemy.ext.asyncio.session import AsyncAttrs as _AsyncAttrs
 from sqlmodel import Field, Relationship
 
@@ -41,8 +41,7 @@ class DBOption(Base, AsyncAttrs[_OptionAsyncAttrs], table=True):
     is_correct: bool
 
     problem_id: UUID = Field(
-        foreign_key="problem.id",
-        # sa_column_kwargs={"ondelete": "CASCADE"},
+        sa_column=Column(Uuid, ForeignKey("problem.id", ondelete="CASCADE"))
     )
     problem: "DBProblem" = Relationship(back_populates="options")
 
@@ -128,7 +127,7 @@ class LoginSession(Base, table=True):
     user_id: UUID = Field(foreign_key="user.id")
 
     expires_at: datetime = Field(
-        default_factory=lambda: utcnow() + timedelta(days=30),
+        default_factory=lambda: utcnow() + timedelta(days=ACCESS_TOKEN_LIFETIME),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     created_at: datetime = Field(
@@ -148,7 +147,7 @@ class LoginSession(Base, table=True):
     device_info: str = ""
     refresh_token_hash: str
     refresh_token_expires_at: datetime = Field(
-        default_factory=lambda: utcnow() + timedelta(days=120),
+        default_factory=lambda: utcnow() + timedelta(days=REFRESH_TOKEN_LIFETIME),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     # refresh token rotate 时, 创建一个新的 session, 将当前 session 设为 expired

@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from uuid import UUID, uuid4
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
-from sqlmodel import delete
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.models.db.base import arona_metadata
 from app.models.db.db import UserRole
@@ -26,16 +27,14 @@ PASSWORD_FOR_TEST = "0d000721"
 PROBLEMSET_NAME_FOR_TEST = "Generic Problemset"
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def setup_test_data(
-    test_session_getter: SessionGetterType,
+    test_session_getter: SessionGetterType, test_engine: AsyncEngine
 ) -> PreparedTestData:
     logger.info("Setting up test data fixture.")
-    async with test_session_getter() as session:
-        # 清理现有数据
-        for table in arona_metadata.tables.values():
-            await session.exec(delete(table))  # type: ignore
-        await session.commit()
+    async with test_engine.begin() as conn:
+        await conn.run_sync(arona_metadata.drop_all)
+        await conn.run_sync(arona_metadata.create_all)
 
     async with test_session_getter() as session:
         # 创建测试用户
@@ -73,7 +72,7 @@ async def setup_test_data(
     )
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def cu_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
@@ -88,7 +87,7 @@ async def cu_auth_headers(
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def su_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
@@ -103,7 +102,7 @@ async def su_auth_headers(
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def admin_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
@@ -118,7 +117,7 @@ async def admin_auth_headers(
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def test_problemset(
     test_client: AsyncClient,
     admin_auth_headers: dict[str, str],
@@ -138,6 +137,7 @@ async def test_problemset(
 
 
 class TestProblemAPIs:
+    @pytest.mark.asyncio
     async def test_list_problemset(
         self,
         test_client: AsyncClient,
@@ -152,6 +152,7 @@ class TestProblemAPIs:
         assert len(result) == 1
         assert UUID(result[0]["id"]) == test_problemset
 
+    @pytest.mark.asyncio
     async def test_create_duplicated_problemset(
         self,
         test_client: AsyncClient,
@@ -171,6 +172,7 @@ class TestProblemAPIs:
         )
         assert UUID(result["id"]) == test_problemset
 
+    @pytest.mark.asyncio
     async def test_add_problems(
         self,
         test_client: AsyncClient,
@@ -213,6 +215,7 @@ class TestProblemAPIs:
         assert len(result) == 2
         assert all(isinstance(UUID(pid), UUID) for pid in result)
 
+    @pytest.mark.asyncio
     async def test_add_problems_to_nonexistent_set(
         self,
         test_client: AsyncClient,
@@ -240,6 +243,7 @@ class TestProblemAPIs:
         )
         assert resp.status_code == 404
 
+    @pytest.mark.asyncio
     async def test_search_problems(
         self,
         test_client: AsyncClient,
@@ -318,6 +322,7 @@ class TestProblemAPIs:
         assert resp.status_code == 200, result
         assert len(result) == 1
 
+    @pytest.mark.asyncio
     async def test_get_problems(
         self,
         test_client: AsyncClient,
@@ -372,6 +377,7 @@ class TestProblemAPIs:
         assert resp.status_code == 200, result
         assert len(result) == 2
 
+    @pytest.mark.asyncio
     async def test_get_problem_count(
         self,
         test_client: AsyncClient,
@@ -426,6 +432,7 @@ class TestProblemAPIs:
         assert resp.status_code == 200, result
         assert result == 2
 
+    @pytest.mark.asyncio
     async def test_random_sample_problems(
         self,
         test_client: AsyncClient,
@@ -476,6 +483,7 @@ class TestProblemAPIs:
             assert "options" in problem
             assert len(problem["options"]) > 0
 
+    @pytest.mark.asyncio
     async def test_delete_problems(
         self,
         test_client: AsyncClient,
@@ -541,6 +549,7 @@ class TestProblemAPIs:
         assert len(result) == 1
         assert "待删除题目2" in result[0]["content"]
 
+    @pytest.mark.asyncio
     async def test_add_problems_permission_denied(
         self,
         test_client: AsyncClient,
@@ -568,6 +577,7 @@ class TestProblemAPIs:
         )
         assert resp.status_code == 403
 
+    @pytest.mark.asyncio
     async def test_delete_problems_permission_denied(
         self,
         test_client: AsyncClient,
@@ -586,6 +596,7 @@ class TestProblemAPIs:
 class TestUserAPIs:
     """用户API测试"""
 
+    @pytest.mark.asyncio
     async def test_user_register(
         self,
         test_client: AsyncClient,
@@ -607,6 +618,7 @@ class TestUserAPIs:
         assert "user_id" in result
         assert isinstance(UUID(result["user_id"]), UUID)
 
+    @pytest.mark.asyncio
     async def test_user_register_duplicate_username(
         self,
         test_client: AsyncClient,
@@ -626,6 +638,7 @@ class TestUserAPIs:
         )
         assert resp.status_code == 400
 
+    @pytest.mark.asyncio
     async def test_user_register_duplicate_email(
         self,
         test_client: AsyncClient,
@@ -645,6 +658,7 @@ class TestUserAPIs:
         )
         assert resp.status_code == 400
 
+    @pytest.mark.asyncio
     async def test_user_register_duplicate_nickname(
         self,
         test_client: AsyncClient,
@@ -664,6 +678,7 @@ class TestUserAPIs:
         )
         assert resp.status_code == 400
 
+    @pytest.mark.asyncio
     async def test_check_field_availability(
         self,
         test_client: AsyncClient,
@@ -693,6 +708,7 @@ class TestUserAPIs:
         assert resp.status_code == 200
         assert resp.json() == "ok"
 
+    @pytest.mark.asyncio
     async def test_check_field_conflict(
         self,
         test_client: AsyncClient,
@@ -723,6 +739,7 @@ class TestUserAPIs:
         assert resp.status_code == 200
         assert resp.json() == "conflict"
 
+    @pytest.mark.asyncio
     async def test_check_field_invalid(
         self,
         test_client: AsyncClient,
@@ -752,6 +769,7 @@ class TestUserAPIs:
         assert resp.status_code == 200
         assert resp.json() == "invalid"
 
+    @pytest.mark.asyncio
     async def test_get_my_info(
         self,
         test_client: AsyncClient,
@@ -771,6 +789,7 @@ class TestUserAPIs:
         assert result["email"] == "common@example.com"
         assert result["nickname"] == "普通用户"
 
+    @pytest.mark.asyncio
     async def test_get_user_info(
         self,
         test_client: AsyncClient,
@@ -796,6 +815,7 @@ class TestUserAPIs:
 class TestSessionAPIs:
     """会话API测试"""
 
+    @pytest.mark.asyncio
     async def test_login_by_user_id(
         self,
         test_client: AsyncClient,
@@ -816,6 +836,7 @@ class TestSessionAPIs:
         assert isinstance(UUID(result["access_token"]), UUID)
         assert isinstance(UUID(result["refresh_token"]), UUID)
 
+    @pytest.mark.asyncio
     async def test_login_by_username(
         self,
         test_client: AsyncClient,
@@ -834,6 +855,7 @@ class TestSessionAPIs:
         assert "access_token" in result
         assert "refresh_token" in result
 
+    @pytest.mark.asyncio
     async def test_login_by_email(
         self,
         test_client: AsyncClient,
@@ -852,6 +874,7 @@ class TestSessionAPIs:
         assert "access_token" in result
         assert "refresh_token" in result
 
+    @pytest.mark.asyncio
     async def test_login_with_wrong_password(
         self,
         test_client: AsyncClient,
@@ -867,6 +890,7 @@ class TestSessionAPIs:
         )
         assert resp.status_code == 401
 
+    @pytest.mark.asyncio
     async def test_login_with_nonexistent_user(
         self,
         test_client: AsyncClient,
@@ -881,6 +905,7 @@ class TestSessionAPIs:
         )
         assert resp.status_code == 401
 
+    @pytest.mark.asyncio
     async def test_logout(
         self,
         test_client: AsyncClient,
@@ -894,6 +919,7 @@ class TestSessionAPIs:
         assert resp.status_code == 200
         assert resp.json() == "ok"
 
+    @pytest.mark.asyncio
     async def test_refresh_token(
         self,
         test_client: AsyncClient,
@@ -925,6 +951,7 @@ class TestSessionAPIs:
         assert "access_token" in result
         assert "refresh_token" in result
 
+    @pytest.mark.asyncio
     async def test_refresh_token_with_invalid_token(
         self,
         test_client: AsyncClient,
@@ -939,6 +966,7 @@ class TestSessionAPIs:
         )
         assert resp.status_code == 401, resp.json()
 
+    @pytest.mark.asyncio
     async def test_access_protected_endpoint_without_auth(
         self,
         test_client: AsyncClient,
@@ -947,6 +975,7 @@ class TestSessionAPIs:
         resp = await test_client.get("/api/v1/user/me")
         assert resp.status_code == 401, resp.json()
 
+    @pytest.mark.asyncio
     async def test_access_protected_endpoint_with_invalid_token(
         self,
         test_client: AsyncClient,

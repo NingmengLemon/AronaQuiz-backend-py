@@ -221,3 +221,6 @@ __marimo__/
 *.sqlite3.lock
 *.db.lock
 .converage
+arona_config.yaml
+arona_config.yml
+arona_config.toml

@@ -341,15 +341,18 @@ async def validate_login_session(
 
     if login_session.status == LoginSessionStatus.EXPIRED:
         return LoginSessionStatus.EXPIRED, None
-    if login_session.expires_at <= utcnow():
+    now = utcnow()
+    if login_session.expires_at <= now:
         if login_session.status == LoginSessionStatus.ACTIVE:
             login_session.status = LoginSessionStatus.EXPIRED
             session.add(login_session)
+            await session.flush()
         return LoginSessionStatus.EXPIRED, None
 
     if login_session.status == LoginSessionStatus.ACTIVE:
-        login_session.last_active = utcnow()
+        login_session.last_active = now
         session.add(login_session)
+        await session.flush()
         return LoginSessionStatus.ACTIVE, login_session
 
     return LoginSessionStatus.INVALID, None

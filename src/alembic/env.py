@@ -15,7 +15,7 @@ from alembic import context
 # 于是用项目根目录拼接上 'src'
 sys.path.append(str(Path(__file__).resolve().parents[2] / "src"))
 
-from app.config import settings
+from app.config import get_settings
 from app.models.db.base import arona_metadata
 from app.utils.db.utils import new_engine
 
@@ -77,7 +77,7 @@ async def run_async_migrations() -> None:
 
     """
 
-    connectable = new_engine(settings.database_url)
+    connectable = new_engine(get_settings().database_url.get_secret_value())
     # connectable = async_engine_from_config(
     #     config.get_section(config.config_ini_section, {}),
     #     prefix="sqlalchemy.",
