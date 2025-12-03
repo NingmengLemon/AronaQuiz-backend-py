@@ -197,9 +197,10 @@ async def list_problemset(session: AsyncSession) -> list[ProblemSetResponse]:
 async def delete_all(session: AsyncSession) -> None:
     # 加 type: ignore 的原因是:
     # https://github.com/fastapi/sqlmodel/issues/909
-    await session.exec(delete(DBProblemSet))  # type: ignore
-    await session.exec(delete(DBProblem))  # type: ignore
+    # 按依赖顺序删除数据，先删除子表再删除父表
     await session.exec(delete(DBOption))  # type: ignore
+    await session.exec(delete(DBProblem))  # type: ignore
+    await session.exec(delete(DBProblemSet))  # type: ignore
 
 
 @overload

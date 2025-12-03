@@ -7,7 +7,6 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from app.models.db.base import arona_metadata
 from app.models.db.db import UserRole
 from app.models.dto.response import ProblemSetCreateStatus
 from app.services.operations import create_user
@@ -27,15 +26,11 @@ PASSWORD_FOR_TEST = "0d000721"
 PROBLEMSET_NAME_FOR_TEST = "Generic Problemset"
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def setup_test_data(
     test_session_getter: SessionGetterType, test_engine: AsyncEngine
 ) -> PreparedTestData:
     logger.info("Setting up test data fixture.")
-    async with test_engine.begin() as conn:
-        await conn.run_sync(arona_metadata.drop_all)
-        await conn.run_sync(arona_metadata.create_all)
-
     async with test_session_getter() as session:
         # 创建测试用户
         common_user_id = await create_user(
@@ -72,7 +67,7 @@ async def setup_test_data(
     )
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def cu_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
@@ -87,7 +82,7 @@ async def cu_auth_headers(
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def su_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
@@ -102,7 +97,7 @@ async def su_auth_headers(
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def admin_auth_headers(
     setup_test_data: PreparedTestData, test_client: AsyncClient
 ) -> dict[str, str]:
@@ -117,7 +112,7 @@ async def admin_auth_headers(
     return {"Authorization": f"Bearer {result['access_token']}"}
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def test_problemset(
     test_client: AsyncClient,
     admin_auth_headers: dict[str, str],

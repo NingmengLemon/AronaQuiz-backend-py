@@ -8,13 +8,12 @@ from uuid import UUID, uuid4
 import pytest
 import pytest_asyncio
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import col, delete, select
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.db import (
     DBOption,
     DBProblem,
-    DBProblemSet,
     DBUser,
     ProblemType,
 )
@@ -49,9 +48,19 @@ async def init_problemset_uuid(
 ) -> AsyncGenerator[UUID, None]:
     logger.info("Initializing problem set UUID fixture.")
     async with test_session_getter() as session:
-        await session.exec(delete(DBProblemSet))  # type: ignore
-        await session.flush()
-        id_, _ = await create_problemset(session, "test")
+        # 创建测试问题集
+        id_, status = await create_problemset(session, "test")
+        if status != ProblemSetCreateStatus.SUCCESS:
+            # 如果已存在，获取已存在的问题集ID
+            problemsets = await list_problemset(session)
+            test_problemset = next(
+                (ps for ps in problemsets if ps.name == "test"), None
+            )
+            if test_problemset:
+                id_ = test_problemset.id
+            else:
+                # 创建新的问题集
+                id_, _ = await create_problemset(session, "test")
         await session.commit()
     logger.info("Problem set UUID fixture initialized.")
     yield id_
