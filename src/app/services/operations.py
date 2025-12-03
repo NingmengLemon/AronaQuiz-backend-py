@@ -14,6 +14,7 @@ from app.models.dto.response import (
     ProblemSetResponse,
 )
 from app.typ import T
+from app.utils.db.decos import in_transaction
 from app.utils.misc import utcnow
 from app.utils.security import hash, sha256, verify
 
@@ -36,6 +37,7 @@ def queryable(o: T) -> QueryableAttribute[T]:
     return cast(QueryableAttribute, o)
 
 
+@in_transaction()
 async def create_problemset(
     session: AsyncSession, name: str
 ) -> tuple[UUID, ProblemSetCreateStatus]:
@@ -51,6 +53,7 @@ async def create_problemset(
     return problemset.id, ProblemSetCreateStatus.SUCCESS
 
 
+@in_transaction()
 async def add_problems(
     session: AsyncSession, problemset_id: UUID, *problems: ProblemSubmit
 ) -> list[UUID] | None:
@@ -131,6 +134,7 @@ async def search_problem(
     return result
 
 
+@in_transaction()
 async def delete_problems(
     session: AsyncSession,
     *problem_ids: UUID,
@@ -144,6 +148,7 @@ async def delete_problems(
     await session.flush()
 
 
+@in_transaction()
 async def delete_problemset(session: AsyncSession, problemset_id: UUID) -> None | UUID:
     problemset = (
         await session.exec(select(DBProblemSet).where(DBProblemSet.id == problemset_id))
@@ -194,6 +199,7 @@ async def list_problemset(session: AsyncSession) -> list[ProblemSetResponse]:
     ]
 
 
+@in_transaction()
 async def delete_all(session: AsyncSession) -> None:
     # 加 type: ignore 的原因是:
     # https://github.com/fastapi/sqlmodel/issues/909
@@ -228,6 +234,7 @@ async def query_user(
     ).one_or_none()
 
 
+@in_transaction()
 async def create_user(
     session: AsyncSession,
     username: str,
@@ -250,6 +257,7 @@ async def create_user(
     return user.id
 
 
+@in_transaction()
 async def report_attempt(
     session: AsyncSession,
     problem_id: UUID,
@@ -286,6 +294,7 @@ async def query_statistic(
     raise NotImplementedError
 
 
+@in_transaction()
 async def login(
     session: AsyncSession,
     *,
@@ -315,7 +324,7 @@ async def login(
     )
     session.add(new_session)
     await session.flush()
-    await session.commit()
+    # await session.commit()
     return new_session.access_token, refresh_token
 
 
@@ -334,6 +343,7 @@ async def query_login_session(
     return (await session.exec(select(LoginSession).where(cond))).one_or_none()
 
 
+@in_transaction()
 async def validate_login_session(
     session: AsyncSession, access_token: UUID
 ) -> tuple[LoginSessionStatus, LoginSession | None]:
@@ -360,6 +370,7 @@ async def validate_login_session(
     return LoginSessionStatus.INVALID, None
 
 
+@in_transaction()
 async def refresh_access_token(
     session: AsyncSession, access_token: UUID, refresh_token: UUID
 ) -> tuple[UUID, UUID | None] | None:
@@ -383,6 +394,7 @@ async def refresh_access_token(
     return new_access_token, None
 
 
+@in_transaction()
 async def logout(session: AsyncSession, access_token: UUID) -> bool:
     login_session = (
         await session.exec(
