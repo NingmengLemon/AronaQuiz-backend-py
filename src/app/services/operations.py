@@ -315,6 +315,7 @@ async def login(
     )
     session.add(new_session)
     await session.flush()
+    await session.commit()
     return new_session.access_token, refresh_token
 
 
