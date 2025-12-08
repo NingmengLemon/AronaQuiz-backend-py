@@ -7,6 +7,21 @@ from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.models.db.problem import (
+    DBOption,
+    DBProblem,
+    DBProblemSet,
+)
+from app.models.db.session import (
+    ACCESS_TOKEN_LIFETIME,
+    LoginSession,
+    LoginSessionStatus,
+)
+from app.models.db.stat import DBAnswerRecord
+from app.models.db.user import (
+    DBUser,
+    UserRole,
+)
 from app.models.dto.request import ProblemSubmit
 from app.models.dto.response import (
     ProblemResponse,
@@ -17,18 +32,6 @@ from app.typ import T
 from app.utils.db import in_transaction
 from app.utils.misc import utcnow
 from app.utils.security import hash, sha256, verify
-
-from ..models.db.db import (
-    ACCESS_TOKEN_LIFETIME,
-    DBAnswerRecord,
-    DBOption,
-    DBProblem,
-    DBProblemSet,
-    DBUser,
-    LoginSession,
-    LoginSessionStatus,
-    UserRole,
-)
 
 logger = logging.getLogger("uvicorn.error")
 

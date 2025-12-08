@@ -12,7 +12,11 @@ from app.api import deps
 from app.config import get_settings
 from app.main import app
 from app.models.db.base import arona_metadata
-from app.models.db.db import DBProblem, DBProblemSet, DBUser
+from app.models.db.problem import (
+    DBProblem,
+    DBProblemSet,
+)
+from app.models.db.user import DBUser
 from app.typ import SessionGetterType
 from app.utils.db import get_session, new_engine
 

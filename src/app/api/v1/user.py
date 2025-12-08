@@ -14,14 +14,14 @@ from app.api.deps import (
     RequireRoles,
     SpeedLimReqDep,
 )
-from app.services.operations import create_user
-from app.models.db.db import DBUser, UserRole
+from app.models.db.user import DBUser, UserRole
 from app.models.dto.request import UserRegisterSubmit
 from app.models.dto.response import (
     SelfInfoResponse,
     UserCreateResponse,
     UserInfoResponse,
 )
+from app.services.operations import create_user
 
 router = APIRouter(tags=["user"])
 USERNAME_REGEX = re.compile(r"^[A-Za-z0-9_\-]{3,16}$", re.U | re.I)

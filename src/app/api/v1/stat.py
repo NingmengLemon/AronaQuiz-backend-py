@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, HTTPException
 
 from app.api.deps import DbSessionDep, LoginRequired
-from app.models.db.db import DBUser
+from app.models.db.user import DBUser
 from app.services.operations import query_problem, query_user
 from app.services.operations import report_attempt as report_attempt_db
 

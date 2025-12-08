@@ -5,16 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from app.api.deps import DbSessionDep, LoginRequired, RequireRoles
-from app.services.operations import (
-    add_problems,
-    create_problemset,
-    delete_problems,
-    get_problem_count,
-    list_problemset,
-    sample,
-    search_problem,
-)
-from app.models.db.db import UserRole
+from app.models.db.user import UserRole
 from app.models.dto.request import (
     ProblemSetSubmit,
     ProblemSubmit,
@@ -23,6 +14,15 @@ from app.models.dto.response import (
     ProblemResponse,
     ProblemSetCreateResponse,
     ProblemSetResponse,
+)
+from app.services.operations import (
+    add_problems,
+    create_problemset,
+    delete_problems,
+    get_problem_count,
+    list_problemset,
+    sample,
+    search_problem,
 )
 
 router = APIRouter(tags=["problem"])

@@ -11,12 +11,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.db.db import (
+from app.models.db.problem import (
     DBOption,
     DBProblem,
-    DBUser,
     ProblemType,
 )
+from app.models.db.user import DBUser
 from app.models.dto.request import OptionSubmit, ProblemSubmit
 from app.models.dto.response import ProblemSetCreateStatus
 from app.services.operations import (
