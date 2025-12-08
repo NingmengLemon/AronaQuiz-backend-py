@@ -1,3 +1,6 @@
+# noqa
+# ruff: noqa
+# type: ignore
 """add_cascade_for_problem
 
 Revision ID: 6340448767fb

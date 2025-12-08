@@ -1,3 +1,6 @@
+# noqa
+# ruff: noqa
+# type: ignore
 """${message}
 
 Revision ID: ${up_revision}
