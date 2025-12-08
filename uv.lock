@@ -126,6 +126,8 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
+    { name = "pytest-sqlalchemy" },
+    { name = "pytest-sqlalchemy-mock" },
     { name = "slowapi" },
 ]
 
@@ -151,6 +153,8 @@ dev = [
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-asyncio", specifier = ">=1.1.0" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
+    { name = "pytest-sqlalchemy", specifier = ">=0.3.0" },
+    { name = "pytest-sqlalchemy-mock", specifier = ">=0.1.7" },
     { name = "slowapi", specifier = ">=0.1.9" },
 ]
 
@@ -976,6 +980,34 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-sqlalchemy"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "coverage" },
+    { name = "pytest" },
+    { name = "sqlalchemy" },
+    { name = "sqlalchemy-utils" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fe/8b/10881b6fd1d8edd109e667546d32b3b4b0c0a287a0efafc33d030b25582b/pytest_sqlalchemy-0.3.0.tar.gz", hash = "sha256:fcac78fb23fe5741a178118d98dfaaac705172ee5ef600a46d0940255182e664", size = 4794, upload-time = "2025-04-19T15:12:49.999Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/b0/8730de674b2bd0bb11f23dd20989e21fdec9058056d4c12e11606a379da2/pytest_sqlalchemy-0.3.0-py3-none-any.whl", hash = "sha256:ca65ecd26d01df3d44e663831d5e636bd17f87042f507ede4181abcf33382241", size = 5486, upload-time = "2025-04-19T15:12:48.467Z" },
+]
+
+[[package]]
+name = "pytest-sqlalchemy-mock"
+version = "0.1.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+    { name = "sqlalchemy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f7/bc/5e9dde88932fcd6f84ca2c9dbfcc5c5d24749c109e5d27f7fff43d7f00e1/pytest_sqlalchemy_mock-0.1.7.tar.gz", hash = "sha256:516637fcdaf7c88687ea21a8c1f3649da50da7e32f6743e10dbc13cb9fb5e46e", size = 4911, upload-time = "2024-08-10T21:09:20.591Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/be/1de595c8a9fb4307012c5ee26118f8d5fdb1004345443d232ebadabb7512/pytest_sqlalchemy_mock-0.1.7-py3-none-any.whl", hash = "sha256:1173d3149f21ce779aac10e2de0e8b7a8fe4b065ea4196463e2f88b75a6a0558", size = 5740, upload-time = "2024-08-10T21:09:19.328Z" },
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -1170,6 +1202,18 @@ asyncio = [
 postgresql-asyncpg = [
     { name = "asyncpg" },
     { name = "greenlet" },
+]
+
+[[package]]
+name = "sqlalchemy-utils"
+version = "0.42.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sqlalchemy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/63/80/4e15fdcfc25a2226122bf316f0ebac86d840ab3fb38b38ca4cabc395865e/sqlalchemy_utils-0.42.0.tar.gz", hash = "sha256:6d1ecd3eed8b941f0faf8a531f5d5cee7cffa2598fcf8163de8c31c7a417a5e0", size = 130531, upload-time = "2025-08-30T18:43:41.904Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/52/86/21e97809b017a4ebc88971eea335130782421851b0ed8dc3ab6126b479f1/sqlalchemy_utils-0.42.0-py3-none-any.whl", hash = "sha256:c8c0b7f00f4734f6f20e9a4d06b39d79d58c8629cba50924fcaeb20e28eb4f48", size = 91744, upload-time = "2025-08-30T18:43:40.199Z" },
 ]
 
 [[package]]

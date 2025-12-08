@@ -26,6 +26,8 @@ dev = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.1",
+    "pytest-sqlalchemy>=0.3.0",
+    "pytest-sqlalchemy-mock>=0.1.7",
     "slowapi>=0.1.9",
 ]
 
