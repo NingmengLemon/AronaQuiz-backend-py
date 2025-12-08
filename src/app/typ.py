@@ -1,7 +1,8 @@
 from collections.abc import Awaitable, Callable
 from enum import Enum
-from typing import ParamSpec, Protocol, TypeVar
+from typing import ParamSpec, Protocol, TypeVar, cast
 
+from sqlalchemy.orm import QueryableAttribute
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 P = ParamSpec("P")
@@ -18,3 +19,7 @@ class VoidType(Enum):
 
 
 SessionGetterType = Callable[[], AsyncSession]
+
+
+def queryable(o: T) -> QueryableAttribute[T]:
+    return cast(QueryableAttribute, o)

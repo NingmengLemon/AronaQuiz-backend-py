@@ -15,7 +15,7 @@ from app.models.dto.response import (
     ProblemSetCreateResponse,
     ProblemSetResponse,
 )
-from app.services.operations import (
+from app.operations.problem import (
     add_problems,
     create_problemset,
     delete_problems,

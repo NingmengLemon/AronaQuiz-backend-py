@@ -19,21 +19,20 @@ from app.models.db.problem import (
 from app.models.db.user import DBUser
 from app.models.dto.request import OptionSubmit, ProblemSubmit
 from app.models.dto.response import ProblemSetCreateStatus
-from app.services.operations import (
+from app.operations.problem import (
     add_problems,
     create_problemset,
-    create_user,
-    delete_all,
+    delete_all_problems,
     delete_problems,
     delete_problemset,
     get_problem_count,
     list_problemset,
     query_problem,
-    query_user,
-    report_attempt,
     sample,
     search_problem,
 )
+from app.operations.stat import report_attempt
+from app.operations.user import create_user, query_user
 from app.typ import SessionGetterType
 from app.utils.misc import utcnow
 
@@ -309,7 +308,7 @@ async def test_delete_problems(
 
     async with test_session_getter() as session:
         # 删除所有问题
-        await delete_all(session)
+        await delete_all_problems(session)
         await session.commit()
         assert await get_problem_count(session) == 0
 
@@ -460,7 +459,7 @@ async def test_problem_count(
         assert await get_problem_count(session) == 2
 
         # 删除一个问题
-        await delete_all(session)
+        await delete_all_problems(session)
         await session.commit()
         assert await get_problem_count(session) == 0
 

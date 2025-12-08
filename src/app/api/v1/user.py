@@ -21,7 +21,7 @@ from app.models.dto.response import (
     UserCreateResponse,
     UserInfoResponse,
 )
-from app.services.operations import create_user
+from app.operations.user import create_user
 
 router = APIRouter(tags=["user"])
 USERNAME_REGEX = re.compile(r"^[A-Za-z0-9_\-]{3,16}$", re.U | re.I)

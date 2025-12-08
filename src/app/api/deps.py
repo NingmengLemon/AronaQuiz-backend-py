@@ -18,7 +18,7 @@ from app.models.db.user import (
     DBUser,
     UserRole,
 )
-from app.services.operations import validate_login_session
+from app.operations.session import validate_login_session
 from app.utils.speedlimit import get_ipaddr, get_remote_address
 
 # global vars for injection
