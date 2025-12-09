@@ -12,11 +12,6 @@ from app.api import deps
 from app.config import get_settings
 from app.main import app
 from app.models.db.base import arona_metadata
-from app.models.db.problem import (
-    DBProblem,
-    DBProblemSet,
-)
-from app.models.db.user import DBUser
 from app.typ import SessionGetterType
 from app.utils.db import get_session, new_engine
 
@@ -80,16 +75,3 @@ async def test_client(test_engine: AsyncEngine) -> AsyncGenerator[AsyncClient, N
 
     logger.info("Test client fixture teardown complete.")
     app.dependency_overrides.clear()
-
-
-@pytest_asyncio.fixture(scope="function", autouse=True)
-async def clean_database(test_session_getter: SessionGetterType) -> None:
-    """在每个测试前清理数据库数据，但保留表结构"""
-    from sqlalchemy import delete
-
-    async with test_session_getter() as session:
-        # 按依赖顺序删除数据
-        await session.exec(delete(DBProblem))
-        await session.exec(delete(DBProblemSet))
-        await session.exec(delete(DBUser))
-        await session.commit()

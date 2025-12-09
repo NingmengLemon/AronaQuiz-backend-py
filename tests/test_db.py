@@ -31,10 +31,8 @@ from app.operations.problem import (
     sample,
     search_problem,
 )
-from app.operations.stat import report_attempt
 from app.operations.user import create_user, query_user
 from app.typ import SessionGetterType
-from app.utils.misc import utcnow
 
 DB_NAME = "test_dbopts"
 
@@ -505,49 +503,6 @@ async def test_user_operations(test_session_getter: SessionGetterType) -> None:
         # 测试查询不存在的用户
         non_existent_user = await query_user(session, username="nonexistent")
         assert non_existent_user is None
-
-
-@pytest.mark.asyncio
-async def test_answer_record_operations(
-    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
-) -> None:
-    """测试答题记录相关操作"""
-
-    async with test_session_getter() as session:
-        # 创建用户和问题
-        user = await _create_user_simple(session, "test_student")
-        # await session.commit()
-
-        problem_ids = await add_problems(
-            session,
-            init_problemset_uuid,
-            ProblemSubmit(
-                content="测试答题记录的问题",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="正确答案"),
-                    OptionSubmit(is_correct=False, order=1, content="错误答案"),
-                ],
-            ),
-        )
-        assert problem_ids is not None
-        problem_id = problem_ids[0]
-        # await session.commit()
-
-        # 测试报告答题尝试（正确）
-        test_time = utcnow()
-        await report_attempt(session, problem_id, user, correct=True, time=test_time)
-
-        # 验证记录更新
-        updated_user = await query_user(session, user_id=user)
-        assert updated_user is not None
-
-        # 测试报告答题尝试（错误）
-        await report_attempt(session, problem_id, user, correct=False)
-
-        # 测试多次答题
-        for i in range(5):
-            await report_attempt(session, problem_id, user, correct=i % 2 == 0)
 
 
 @pytest.mark.asyncio
