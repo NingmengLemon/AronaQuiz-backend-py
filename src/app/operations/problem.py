@@ -1,13 +1,16 @@
 from uuid import UUID
 
-from sqlalchemy.orm import selectinload
-from sqlmodel import col, delete, func, or_, select
+from sqlalchemy import Text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped
+from sqlmodel import cast, col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.problem import (
-    DBOption,
     DBProblem,
     DBProblemSet,
+    ProblemType,
+    SelectiveProblemDetails,
 )
 from app.models.dto.request import ProblemSubmit
 from app.models.dto.response import (
@@ -15,7 +18,6 @@ from app.models.dto.response import (
     ProblemSetCreateStatus,
     ProblemSetResponse,
 )
-from app.typ import queryable
 from app.utils.db import in_transaction
 
 
@@ -47,22 +49,18 @@ async def add_problems(
         return None
     added_ids: list[UUID] = []
     for problem in problems:
-        problem_db = DBProblem.model_validate(
-            problem,
-            update={
-                "options": [],
-                "problemset_id": problemset.id,
-                "problemset": problemset,
-            },
-        )
-        problem_id = problem_db.id
-        options_db = [
-            DBOption.model_validate(o, update={"problem_id": problem_db.id})
-            for o in problem.options
-        ]
-        problem_db.options = options_db
-        session.add_all([problem_db, *options_db])
-        added_ids.append(problem_id)
+        match problem.type:
+            case ProblemType.SELECTIVE:
+                problem_db = DBProblem.model_validate(
+                    problem,
+                    update={
+                        "problemset_id": problemset.id,
+                        "problemset": problemset,
+                    },
+                )
+                problem_id = problem_db.id
+                session.add(problem_db)
+                added_ids.append(problem_id)
     await session.flush()
     # await session.commit()
     return added_ids
@@ -73,12 +71,9 @@ async def query_problem(
 ) -> ProblemResponse | None:
     """not public"""
     problem_db = (
-        await session.exec(
-            select(DBProblem)
-            .where(DBProblem.id == problem_id)
-            .options(selectinload(queryable(DBProblem.options)))
-        )
+        await session.exec(select(DBProblem).where(DBProblem.id == problem_id))
     ).one_or_none()
+
     return (
         ProblemResponse.model_validate(problem_db, from_attributes=True)
         if problem_db is not None
@@ -90,6 +85,7 @@ async def search_problem(
     session: AsyncSession,
     kw: str | None = None,
     problemset_id: UUID | None = None,
+    problem_type: ProblemType | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> list[ProblemResponse]:
@@ -97,25 +93,18 @@ async def search_problem(
     if problemset_id:
         stmt = stmt.where(DBProblem.problemset_id == problemset_id)
     if kw:
-        stmt = (
-            stmt.outerjoin(DBOption)
-            .filter(
-                or_(
-                    col(DBProblem.content).icontains(kw),
-                    col(DBOption.content).icontains(kw),
-                )
+        stmt = stmt.filter(
+            or_(
+                col(DBProblem.content).icontains(kw),
             )
-            .distinct()
-        )
-    stmt = stmt.offset(page_size * (page - 1)).limit(page_size)
-    db_problems = (
-        await session.exec(stmt.options(selectinload(queryable(DBProblem.options))))
-    ).all()
-    result: list[ProblemResponse] = []
-    for p in db_problems:
-        result.append(ProblemResponse.model_validate(p, from_attributes=True))
-
-    return result
+        ).distinct()
+    if problem_type == ProblemType.SELECTIVE:
+        pass  # TODO: add more filters for selective problems
+    stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+    db_problems = await session.exec(stmt)
+    return [
+        ProblemResponse.model_validate(p, from_attributes=True) for p in db_problems
+    ]
 
 
 @in_transaction()
@@ -123,11 +112,7 @@ async def delete_problems(
     session: AsyncSession,
     *problem_ids: UUID,
 ) -> None:
-    stmt = delete(DBProblem)
-    stmt = stmt.where(col(DBProblem.id).in_(problem_ids))
-    await session.exec(stmt)  # type: ignore
-    stmt = delete(DBOption)
-    stmt = stmt.where(col(DBOption.problem_id).in_(problem_ids))
+    stmt = delete(DBProblem).where(col(DBProblem.id).in_(problem_ids))
     await session.exec(stmt)  # type: ignore
     await session.flush()
     # await session.commit()
@@ -160,15 +145,16 @@ async def get_problem_count(
 
 async def sample(
     session: AsyncSession, problemset_id: UUID, n: int = 20
-) -> list[ProblemSubmit]:
+) -> list[ProblemResponse]:
     db_problems = await session.exec(
         select(DBProblem)
         .where(DBProblem.problemset_id == problemset_id)
         .order_by(func.random())
         .limit(n)
-        .options(selectinload(queryable(DBProblem.options)))
     )
-    return [ProblemSubmit.model_validate(p, from_attributes=True) for p in db_problems]
+    return [
+        ProblemResponse.model_validate(p, from_attributes=True) for p in db_problems
+    ]
 
 
 async def list_problemset(session: AsyncSession) -> list[ProblemSetResponse]:
@@ -190,6 +176,5 @@ async def delete_all_problems(session: AsyncSession) -> None:
     # 加 type: ignore 的原因是:
     # https://github.com/fastapi/sqlmodel/issues/909
     # 按依赖顺序删除数据，先删除子表再删除父表
-    await session.exec(delete(DBOption))  # type: ignore
     await session.exec(delete(DBProblem))  # type: ignore
     await session.exec(delete(DBProblemSet))  # type: ignore

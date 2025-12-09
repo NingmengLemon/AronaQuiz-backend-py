@@ -82,8 +82,8 @@ async def register(
                 400, f"用户信息不可用: {field}: `{value}` ({field_status})"
             )
 
-    user_id = await create_user(db, **submit.model_dump(), role=UserRole.USER)
-    return UserCreateResponse(user_id=user_id)
+    user = await create_user(db, **submit.model_dump(), role=UserRole.USER)
+    return UserCreateResponse.model_validate(user, from_attributes=True)
 
 
 @router.get("/me")

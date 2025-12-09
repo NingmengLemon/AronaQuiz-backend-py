@@ -12,12 +12,13 @@ from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.problem import (
-    DBOption,
     DBProblem,
     ProblemType,
+    SelectiveProblemDetails,
+    SelectiveProblemOption,
 )
 from app.models.db.user import DBUser
-from app.models.dto.request import OptionSubmit, ProblemSubmit
+from app.models.dto.request import ProblemSubmit, SelectiveProblemSubmit
 from app.models.dto.response import ProblemSetCreateStatus
 from app.operations.problem import (
     add_problems,
@@ -33,7 +34,6 @@ from app.operations.problem import (
 )
 from app.operations.user import create_user, query_user
 from app.typ import SessionGetterType
-
 
 logger = logging.getLogger(__name__)
 
@@ -63,13 +63,15 @@ async def init_problemset_uuid(
 
 
 async def _create_user_simple(session: AsyncSession, username: str) -> UUID:
-    return await create_user(
-        session,
-        username,
-        email=f"{username.lower().replace(' ', '')}@example.com",
-        nickname=username,
-        password="114514",
-    )
+    return (
+        await create_user(
+            session,
+            username,
+            email=f"{username.lower().replace(' ', '')}@example.com",
+            nickname=username,
+            password="114514",
+        )
+    ).id
 
 
 @pytest.mark.asyncio
@@ -80,15 +82,26 @@ async def test_add(
         await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="114514 + 1919810 = ?",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="2034324"),
-                    OptionSubmit(is_correct=False, order=1, content="45450721"),
-                    OptionSubmit(is_correct=False, order=2, content="0x0d000721"),
-                    OptionSubmit(is_correct=False, order=3, content="undefined"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="2034324"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="45450721"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=2, content="0x0d000721"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=3, content="undefined"
+                        ),
+                    ],
+                ),
             ),
         )
         # await session.commit()
@@ -97,10 +110,10 @@ async def test_add(
         problems = (await session.exec(select(DBProblem))).all()
         assert len(problems) == 1
         problem = problems[0]
-        options = await problem.awaitable_attrs.options
+        options = problem.details["options"]
         assert len(options) == 4
-        assert options[0].is_correct == 1
-        assert options[0].content == "2034324"
+        assert options[0]["is_correct"] == 1
+        assert options[0]["content"] == "2034324"
 
 
 @pytest.mark.asyncio
@@ -117,21 +130,19 @@ async def test_multiadd(
             raw_problem.strip().split(",")
         )
         problems.append(
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content=content,
-                type=(
-                    ProblemType.multi_select
-                    if type_ == "多选题"
-                    else ProblemType.single_select
+                details=SelectiveProblemDetails(
+                    type="multiple" if len(answ) > 1 else "single",
+                    options=[
+                        SelectiveProblemOption(
+                            content=opcontent,
+                            order=ord(order) - ord("A"),
+                            is_correct=order in answ,
+                        )
+                        for order, opcontent in zip("ABCD", filter(None, [a, b, c, d]))
+                    ],
                 ),
-                options=[
-                    OptionSubmit(
-                        content=opcontent,
-                        order=ord(order) - ord("A"),
-                        is_correct=order in answ,
-                    )
-                    for order, opcontent in zip("ABCD", filter(None, [a, b, c, d]))
-                ],
             )
         )
     with open("data/example_data.json", "r", encoding="utf-8") as fp:
@@ -145,10 +156,13 @@ async def test_multiadd(
                 session,
                 i,
                 *[
-                    ProblemSubmit(
+                    SelectiveProblemSubmit(
                         content=p["content"],
-                        type=p["type"],
-                        options=[OptionSubmit(**o) for o in p["options"]],
+                        type=ProblemType.SELECTIVE,
+                        details={
+                            "type": p["type"],
+                            "options": p["options"],
+                        },
                     )
                     for p in s["problems"]
                 ],
@@ -171,14 +185,23 @@ async def test_query_problem(
         problem_ids = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="测试查询问题",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="正确答案"),
-                    OptionSubmit(is_correct=False, order=1, content="错误答案1"),
-                    OptionSubmit(is_correct=False, order=2, content="错误答案2"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="正确答案"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="错误答案1"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=2, content="错误答案2"
+                        ),
+                    ],
+                ),
             ),
         )
         assert problem_ids is not None
@@ -190,10 +213,10 @@ async def test_query_problem(
         queried_problem = await query_problem(session, problem_id)
         assert queried_problem is not None
         assert queried_problem.content == "测试查询问题"
-        assert queried_problem.type == ProblemType.single_select
-        assert len(queried_problem.options) == 3
-        assert queried_problem.options[0].content == "正确答案"
-        assert queried_problem.options[0].is_correct is True
+        assert queried_problem.type == ProblemType.SELECTIVE
+        assert len(queried_problem.details["options"]) == 3
+        assert queried_problem.details["options"][0]["content"] == "正确答案"
+        assert queried_problem.details["options"][0]["is_correct"] is True
 
     async with test_session_getter() as session:
         # 测试查询不存在的问题
@@ -212,29 +235,50 @@ async def test_search_problem(
         await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="Python是一种编程语言",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="是的"),
-                    OptionSubmit(is_correct=False, order=1, content="不是"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="是的"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="不是"
+                        ),
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="Java也是一种编程语言",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="正确"),
-                    OptionSubmit(is_correct=False, order=1, content="错误"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="正确"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="错误"
+                        ),
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="什么是Python？",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="编程语言"),
-                    OptionSubmit(is_correct=False, order=1, content="动物"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="编程语言"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="动物"
+                        ),
+                    ],
+                ),
             ),
         )
         # await session.commit()
@@ -268,20 +312,41 @@ async def test_delete_problems(
         problem_ids = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="问题1",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案1")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="答案1"
+                        )
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="问题2",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案2")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="答案2"
+                        )
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="问题3",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案3")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="答案3"
+                        )
+                    ],
+                ),
             ),
         )
         assert problem_ids is not None
@@ -320,12 +385,17 @@ async def test_sample_problems(
         problems = []
         for i in range(50):
             problems.append(
-                ProblemSubmit(
+                SelectiveProblemSubmit(
                     content=f"问题{i}",
-                    type=ProblemType.single_select,
-                    options=[
-                        OptionSubmit(is_correct=True, order=0, content=f"答案{i}")
-                    ],
+                    type=ProblemType.SELECTIVE,
+                    details=SelectiveProblemDetails(
+                        type="single",
+                        options=[
+                            SelectiveProblemOption(
+                                is_correct=True, order=0, content=f"答案{i}"
+                            )
+                        ],
+                    ),
                 )
             )
 
@@ -341,8 +411,8 @@ async def test_sample_problems(
         # 验证抽样结果都是有效的问题
         for problem in sampled_problems:
             assert problem.content.startswith("问题")
-            assert len(problem.options) == 1
-            assert problem.options[0].is_correct is True
+            assert len(problem.details["options"]) == 1
+            assert problem.details["options"][0]["is_correct"] is True
 
         # 测试抽样数量超过总数
         all_problems = await sample(session, init_problemset_uuid, 100)
@@ -350,7 +420,7 @@ async def test_sample_problems(
 
 
 @pytest.mark.asyncio
-async def test_multi_select_problem(
+async def test_SELECTIVE_problem(
     test_session_getter: SessionGetterType, init_problemset_uuid: UUID
 ) -> None:
     """测试多选问题类型"""
@@ -359,15 +429,24 @@ async def test_multi_select_problem(
         problem_ids = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="以下哪些是编程语言？",
-                type=ProblemType.multi_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="Python"),
-                    OptionSubmit(is_correct=True, order=1, content="Java"),
-                    OptionSubmit(is_correct=False, order=2, content="HTML"),
-                    OptionSubmit(is_correct=True, order=3, content="C++"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="multiple",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="Python"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=True, order=1, content="Java"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=2, content="HTML"
+                        ),
+                        SelectiveProblemOption(is_correct=True, order=3, content="C++"),
+                    ],
+                ),
             ),
         )
         assert problem_ids is not None
@@ -378,13 +457,15 @@ async def test_multi_select_problem(
         # 查询并验证多选题
         problem = await query_problem(session, problem_id)
         assert problem is not None
-        assert problem.type == ProblemType.multi_select
-        assert len(problem.options) == 4
+        assert problem.type == ProblemType.SELECTIVE
+        assert len(problem.details["options"]) == 4
 
         # 验证正确答案
-        correct_options = [opt for opt in problem.options if opt.is_correct]
+        correct_options = [
+            opt for opt in problem.details["options"] if opt["is_correct"]
+        ]
         assert len(correct_options) == 3
-        correct_contents = {opt.content for opt in correct_options}
+        correct_contents = {opt["content"] for opt in correct_options}
         assert correct_contents == {"Python", "Java", "C++"}
 
 
@@ -398,10 +479,15 @@ async def test_search_edge_cases(
         await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="测试空字符串搜索test",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(is_correct=True, order=0, content="答案")
+                    ],
+                ),
             ),
         )
         # await session.commit()
@@ -433,10 +519,15 @@ async def test_problem_count(
         await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="计数测试问题",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(is_correct=True, order=0, content="答案")
+                    ],
+                ),
             ),
         )
         # await session.commit()
@@ -446,10 +537,15 @@ async def test_problem_count(
         await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="另一个计数测试问题",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(is_correct=True, order=0, content="答案")
+                    ],
+                ),
             ),
         )
         # await session.commit()
@@ -521,15 +617,26 @@ async def test_advanced_search_operations(
 
         added_problems = []
         for content, *options in problems_data:
-            problem = ProblemSubmit(
+            problem = SelectiveProblemSubmit(
                 content=content,
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content=options[0]),
-                    OptionSubmit(is_correct=False, order=1, content=options[1]),
-                    OptionSubmit(is_correct=False, order=2, content=options[2]),
-                    OptionSubmit(is_correct=False, order=3, content=options[3]),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content=options[0]
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content=options[1]
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=2, content=options[2]
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=3, content=options[3]
+                        ),
+                    ],
+                ),
             )
             added_problems.append(problem)
 
@@ -587,17 +694,20 @@ async def test_concurrent_operations(
             problems = []
             for i in range(10):
                 problems.append(
-                    ProblemSubmit(
+                    SelectiveProblemSubmit(
                         content=f"批次{batch_id}问题{i}",
-                        type=ProblemType.single_select,
-                        options=[
-                            OptionSubmit(
-                                is_correct=True, order=0, content=f"正确答案{i}"
-                            ),
-                            OptionSubmit(
-                                is_correct=False, order=1, content=f"错误答案{i}"
-                            ),
-                        ],
+                        type=ProblemType.SELECTIVE,
+                        details=SelectiveProblemDetails(
+                            type="single",
+                            options=[
+                                SelectiveProblemOption(
+                                    is_correct=True, order=0, content=f"正确答案{i}"
+                                ),
+                                SelectiveProblemOption(
+                                    is_correct=False, order=1, content=f"错误答案{i}"
+                                ),
+                            ],
+                        ),
                     )
                 )
             await add_problems(session, init_problemset_uuid, *problems)
@@ -623,10 +733,17 @@ async def test_data_validation_and_constraints(
             await add_problems(
                 session,
                 init_problemset_uuid,
-                ProblemSubmit(
+                SelectiveProblemSubmit(
                     content="",  # 空内容
-                    type=ProblemType.single_select,
-                    options=[OptionSubmit(is_correct=True, order=0, content="答案")],
+                    type=ProblemType.SELECTIVE,
+                    details=SelectiveProblemDetails(
+                        type="single",
+                        options=[
+                            SelectiveProblemOption(
+                                is_correct=True, order=0, content="答案"
+                            )
+                        ],
+                    ),
                 ),
             )
             # await session.commit()
@@ -640,15 +757,26 @@ async def test_data_validation_and_constraints(
         problem_ids = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="测试选项顺序",
-                type=ProblemType.multi_select,
-                options=[
-                    OptionSubmit(is_correct=False, order=2, content="第三个"),
-                    OptionSubmit(is_correct=True, order=0, content="第一个"),
-                    OptionSubmit(is_correct=False, order=3, content="第四个"),
-                    OptionSubmit(is_correct=True, order=1, content="第二个"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=False, order=2, content="第三个"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="第一个"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=3, content="第四个"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=True, order=1, content="第二个"
+                        ),
+                    ],
+                ),
             ),
         )
         assert problem_ids is not None
@@ -657,11 +785,11 @@ async def test_data_validation_and_constraints(
         # 验证选项顺序
         problem = await query_problem(session, problem_ids[0])
         assert problem is not None
-        sorted_options = sorted(problem.options, key=lambda x: x.order)
-        assert sorted_options[0].content == "第一个"
-        assert sorted_options[1].content == "第二个"
-        assert sorted_options[2].content == "第三个"
-        assert sorted_options[3].content == "第四个"
+        sorted_options = sorted(problem.details["options"], key=lambda x: x["order"])
+        assert sorted_options[0]["content"] == "第一个"
+        assert sorted_options[1]["content"] == "第二个"
+        assert sorted_options[2]["content"] == "第三个"
+        assert sorted_options[3]["content"] == "第四个"
 
 
 @pytest.mark.asyncio
@@ -686,12 +814,17 @@ async def test_problemset_operations_extended(
             problems = []
             for i in range(count):
                 problems.append(
-                    ProblemSubmit(
+                    SelectiveProblemSubmit(
                         content=f"问题{i}",
-                        type=ProblemType.single_select,
-                        options=[
-                            OptionSubmit(is_correct=True, order=0, content=f"答案{i}")
-                        ],
+                        type=ProblemType.SELECTIVE,
+                        details=SelectiveProblemDetails(
+                            type="single",
+                            options=[
+                                SelectiveProblemOption(
+                                    is_correct=True, order=0, content=f"答案{i}"
+                                )
+                            ],
+                        ),
                     )
                 )
             await add_problems(session, ps_id, *problems)
@@ -732,10 +865,15 @@ async def test_edge_cases_and_error_handling(
         result = await add_problems(
             session,
             fake_problemset_id,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="测试问题",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(is_correct=True, order=0, content="答案")
+                    ],
+                ),
             ),
         )
         assert result is None  # 应该返回 None
@@ -771,15 +909,26 @@ async def test_problem_types_and_options(
         single_choice_id = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="哪个是正确的？",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=False, order=0, content="选项A"),
-                    OptionSubmit(is_correct=True, order=1, content="选项B"),
-                    OptionSubmit(is_correct=False, order=2, content="选项C"),
-                    OptionSubmit(is_correct=False, order=3, content="选项D"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=False, order=0, content="选项A"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=True, order=1, content="选项B"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=2, content="选项C"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=3, content="选项D"
+                        ),
+                    ],
+                ),
             ),
         )
 
@@ -787,15 +936,26 @@ async def test_problem_types_and_options(
         multi_choice_id = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="以下哪些是正确的？",
-                type=ProblemType.multi_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="正确选项1"),
-                    OptionSubmit(is_correct=False, order=1, content="错误选项1"),
-                    OptionSubmit(is_correct=True, order=2, content="正确选项2"),
-                    OptionSubmit(is_correct=True, order=3, content="正确选项3"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="multiple",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="正确选项1"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="错误选项1"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=True, order=2, content="正确选项2"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=True, order=3, content="正确选项3"
+                        ),
+                    ],
+                ),
             ),
         )
 
@@ -803,13 +963,16 @@ async def test_problem_types_and_options(
         binary_choice_id = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="这是真的吗？",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="是"),
-                    OptionSubmit(is_correct=False, order=1, content="否"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(is_correct=True, order=0, content="是"),
+                        SelectiveProblemOption(is_correct=False, order=1, content="否"),
+                    ],
+                ),
             ),
         )
 
@@ -817,13 +980,18 @@ async def test_problem_types_and_options(
         many_options_id = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="选择所有偶数",
-                type=ProblemType.multi_select,
-                options=[
-                    OptionSubmit(is_correct=(i % 2 == 0), order=i, content=str(i))
-                    for i in range(10)
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="multiple",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=(i % 2 == 0), order=i, content=str(i)
+                        )
+                        for i in range(10)
+                    ],
+                ),
             ),
         )
 
@@ -836,28 +1004,34 @@ async def test_problem_types_and_options(
         # 验证单选题
         single_problem = await query_problem(session, single_choice_id[0])
         assert single_problem is not None
-        assert single_problem.type == ProblemType.single_select
-        correct_options = [opt for opt in single_problem.options if opt.is_correct]
+        assert single_problem.type == ProblemType.SELECTIVE
+        correct_options = [
+            opt for opt in single_problem.details["options"] if opt["is_correct"]
+        ]
         assert len(correct_options) == 1
-        assert correct_options[0].content == "选项B"
+        assert correct_options[0]["content"] == "选项B"
 
         # 验证多选题
         multi_problem = await query_problem(session, multi_choice_id[0])
         assert multi_problem is not None
-        assert multi_problem.type == ProblemType.multi_select
-        correct_options = [opt for opt in multi_problem.options if opt.is_correct]
+        assert multi_problem.type == ProblemType.SELECTIVE
+        correct_options = [
+            opt for opt in multi_problem.details["options"] if opt["is_correct"]
+        ]
         assert len(correct_options) == 3
 
         # 验证二元选择题
         binary_problem = await query_problem(session, binary_choice_id[0])
         assert binary_problem is not None
-        assert len(binary_problem.options) == 2
+        assert len(binary_problem.details["options"]) == 2
 
         # 验证多选项题目
         many_options_problem = await query_problem(session, many_options_id[0])
         assert many_options_problem is not None
-        assert len(many_options_problem.options) == 10
-        correct_count = sum(1 for opt in many_options_problem.options if opt.is_correct)
+        assert len(many_options_problem.details["options"]) == 10
+        correct_count = sum(
+            1 for opt in many_options_problem.details["options"] if opt["is_correct"]
+        )
         assert correct_count == 5  # 0, 2, 4, 6, 8
 
 
@@ -874,21 +1048,26 @@ async def test_performance_and_bulk_operations(
         bulk_problems = []
         for i in range(100):
             bulk_problems.append(
-                ProblemSubmit(
+                SelectiveProblemSubmit(
                     content=f"性能测试问题{i}",
-                    type=ProblemType.single_select,
-                    options=[
-                        OptionSubmit(is_correct=True, order=0, content=f"正确答案{i}"),
-                        OptionSubmit(
-                            is_correct=False, order=1, content=f"错误答案{i}a"
-                        ),
-                        OptionSubmit(
-                            is_correct=False, order=2, content=f"错误答案{i}b"
-                        ),
-                        OptionSubmit(
-                            is_correct=False, order=3, content=f"错误答案{i}c"
-                        ),
-                    ],
+                    type=ProblemType.SELECTIVE,
+                    details=SelectiveProblemDetails(
+                        type="single",
+                        options=[
+                            SelectiveProblemOption(
+                                is_correct=True, order=0, content=f"正确答案{i}"
+                            ),
+                            SelectiveProblemOption(
+                                is_correct=False, order=1, content=f"错误答案{i}a"
+                            ),
+                            SelectiveProblemOption(
+                                is_correct=False, order=2, content=f"错误答案{i}b"
+                            ),
+                            SelectiveProblemOption(
+                                is_correct=False, order=3, content=f"错误答案{i}c"
+                            ),
+                        ],
+                    ),
                 )
             )
 
@@ -961,39 +1140,63 @@ async def test_unicode_and_special_characters(
     async with test_session_getter() as session:
         # 测试各种Unicode字符
         unicode_problems = [
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="数学公式：∫₀¹ x² dx = ?",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="1/3"),
-                    OptionSubmit(is_correct=False, order=1, content="1/2"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(is_correct=True, order=0, content="1/3"),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="1/2"
+                        ),
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="emoji测试：🐍Python vs ☕Java？",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(
-                        is_correct=True, order=0, content="Both are great! 🎉"
-                    ),
-                    OptionSubmit(is_correct=False, order=1, content="Neither 😞"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="Both are great! 🎉"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="Neither 😞"
+                        ),
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="中文测试：北京、上海、广州",
-                type=ProblemType.multi_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="一线城市"),
-                    OptionSubmit(is_correct=False, order=1, content="二线城市"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="一线城市"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="二线城市"
+                        ),
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="Русский язык тест",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="Привет"),
-                    OptionSubmit(is_correct=False, order=1, content="Hello"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="Привет"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="Hello"
+                        ),
+                    ],
+                ),
             ),
         ]
 
@@ -1021,7 +1224,7 @@ async def test_unicode_and_special_characters(
             assert retrieved_problem is not None
             # 验证内容没有被截断或损坏
             assert len(retrieved_problem.content) > 0
-            assert len(retrieved_problem.options) > 0
+            assert len(retrieved_problem.details["options"]) > 0
 
 
 @pytest.mark.asyncio
@@ -1035,13 +1238,20 @@ async def test_database_integrity_and_relationships(
         problem_ids = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="关系测试问题",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="选项1"),
-                    OptionSubmit(is_correct=False, order=1, content="选项2"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="选项1"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="选项2"
+                        ),
+                    ],
+                ),
             ),
         )
         assert problem_ids is not None
@@ -1053,24 +1263,12 @@ async def test_database_integrity_and_relationships(
         ).one_or_none()
         assert problem_db is not None
 
-        options = await problem_db.awaitable_attrs.options
+        options = problem_db.details["options"]
         assert len(options) == 2
-        assert all(opt.problem_id == problem_db.id for opt in options)
 
         # 验证问题集和问题的关系
         problemset_db = await problem_db.awaitable_attrs.problemset
         assert problemset_db.id == init_problemset_uuid
-
-        # 测试级联删除：删除问题应该同时删除其选项
-        option_ids = [opt.id for opt in options]
-        await delete_problems(session, problem_ids[0])
-        # await session.commit()
-
-        # 验证选项也被删除了
-        remaining_options = (
-            await session.exec(select(DBOption).where(col(DBOption.id).in_(option_ids)))
-        ).all()
-        assert len(remaining_options) == 0
 
 
 @pytest.mark.asyncio
@@ -1082,23 +1280,29 @@ async def test_problem_sampling_variations(
         # 添加不同类型的问题
         mixed_problems = []
         for i in range(20):
-            problem_type = (
-                ProblemType.single_select if i % 2 == 0 else ProblemType.multi_select
-            )
             options = [
-                OptionSubmit(is_correct=True, order=0, content=f"正确答案{i}"),
-                OptionSubmit(is_correct=False, order=1, content=f"错误答案{i}"),
+                SelectiveProblemOption(
+                    is_correct=True, order=0, content=f"正确答案{i}"
+                ),
+                SelectiveProblemOption(
+                    is_correct=False, order=1, content=f"错误答案{i}"
+                ),
             ]
-            if problem_type == ProblemType.multi_select:
+            if i % 2 == 0:
                 options.append(
-                    OptionSubmit(is_correct=True, order=2, content=f"另一个正确答案{i}")
+                    SelectiveProblemOption(
+                        is_correct=True, order=2, content=f"另一个正确答案{i}"
+                    )
                 )
 
             mixed_problems.append(
-                ProblemSubmit(
+                SelectiveProblemSubmit(
                     content=f"抽样测试问题{i}",
-                    type=problem_type,
-                    options=options,
+                    type=ProblemType.SELECTIVE,
+                    details=SelectiveProblemDetails(
+                        type="multiple" if i % 2 == 0 else "single",
+                        options=options,
+                    ),
                 )
             )
 
@@ -1121,32 +1325,59 @@ async def test_complex_query_scenarios(
     async with test_session_getter() as session:
         # 创建复杂的测试数据
         complex_problems = [
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="Python中的装饰器是什么？",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="一种设计模式"),
-                    OptionSubmit(is_correct=False, order=1, content="一种数据类型"),
-                    OptionSubmit(is_correct=False, order=2, content="一种循环结构"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="single",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="一种设计模式"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="一种数据类型"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=2, content="一种循环结构"
+                        ),
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="以下哪些是Python的内置数据类型？",
-                type=ProblemType.multi_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="list"),
-                    OptionSubmit(is_correct=True, order=1, content="dict"),
-                    OptionSubmit(is_correct=False, order=2, content="array"),
-                    OptionSubmit(is_correct=True, order=3, content="tuple"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="multiple",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="list"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=True, order=1, content="dict"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=2, content="array"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=True, order=3, content="tuple"
+                        ),
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="JavaScript中的异步编程",
-                type=ProblemType.single_select,
-                options=[
-                    OptionSubmit(is_correct=True, order=0, content="Promise"),
-                    OptionSubmit(is_correct=False, order=1, content="Synchronous"),
-                ],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="multiple",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="Promise"
+                        ),
+                        SelectiveProblemOption(
+                            is_correct=False, order=1, content="Synchronous"
+                        ),
+                    ],
+                ),
             ),
         ]
 
@@ -1203,20 +1434,41 @@ async def test_data_consistency_after_operations(
         problem_ids = await add_problems(
             session,
             init_problemset_uuid,
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="一致性测试问题1",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案1")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="multiple",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="答案1"
+                        )
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="一致性测试问题2",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案2")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="multiple",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="答案2"
+                        )
+                    ],
+                ),
             ),
-            ProblemSubmit(
+            SelectiveProblemSubmit(
                 content="一致性测试问题3",
-                type=ProblemType.single_select,
-                options=[OptionSubmit(is_correct=True, order=0, content="答案3")],
+                type=ProblemType.SELECTIVE,
+                details=SelectiveProblemDetails(
+                    type="multiple",
+                    options=[
+                        SelectiveProblemOption(
+                            is_correct=True, order=0, content="答案3"
+                        )
+                    ],
+                ),
             ),
         )
         assert problem_ids is not None

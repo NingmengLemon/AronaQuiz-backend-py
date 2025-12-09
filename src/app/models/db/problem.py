@@ -1,56 +1,91 @@
 from collections.abc import Awaitable
+from datetime import datetime
 from enum import StrEnum, auto
+from typing import Any, Literal, Type, TypedDict
 from uuid import UUID
 
-from sqlalchemy import Column, ForeignKey, Uuid
+from pydantic import (
+    BaseModel,
+    TypeAdapter,
+    ValidationError,
+    ValidationInfo,
+    field_validator,
+)
+from pydantic import Field as PydField
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship
 
+from app.utils.misc import utcnow
 from app.utils.uuid7 import uuid7
 
 from .base import AsyncAttrs, Base
 
 
 class ProblemType(StrEnum):
-    single_select = auto()
-    multi_select = auto()
+    SELECTIVE = auto()
 
 
-class _OptionAsyncAttrs:
-    problem: Awaitable["DBProblem"]
-
-
-class DBOption(Base, AsyncAttrs[_OptionAsyncAttrs], table=True):
-    __tablename__ = "option"
-    id: UUID = Field(default_factory=uuid7, primary_key=True)
+class SelectiveProblemOption(TypedDict):
     order: int
-    content: str
     is_correct: bool
+    content: str
 
-    problem_id: UUID = Field(
-        sa_column=Column(Uuid, ForeignKey("problem.id", ondelete="CASCADE"))
-    )
-    problem: "DBProblem" = Relationship(back_populates="options")
+
+class SelectiveProblemDetails(TypedDict):
+    type: Literal["single", "multiple"]
+    options: list[SelectiveProblemOption]
+
+
+type ProblemDetails = SelectiveProblemDetails  # | ...
 
 
 class _ProblemAsyncAttrs:
-    options: Awaitable[list[DBOption]]
     problemset: Awaitable["DBProblemSet"]
+
+
+PROBLEM_DETAIL_TYPE_MAPPING: dict[ProblemType, type[ProblemDetails]] = {
+    ProblemType.SELECTIVE: SelectiveProblemDetails,
+}
 
 
 class DBProblem(Base, AsyncAttrs[_ProblemAsyncAttrs], table=True):
     __tablename__ = "problem"
     id: UUID = Field(default_factory=uuid7, primary_key=True)
-    content: str
     type: ProblemType
+    content: str
+    details: ProblemDetails = Field(sa_column=Column(JSONB, nullable=False))
+    explanation: str | None = None
 
     problemset_id: UUID = Field(
         sa_column=Column(Uuid, ForeignKey("problemset.id", ondelete="CASCADE"))
     )
     problemset: "DBProblemSet" = Relationship(back_populates="problems")
-    options: list[DBOption] = Relationship(
-        back_populates="problem",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+
+    __table_args__ = (
+        Index("ix_problem_details_gin", "details", postgresql_using="gin"),
     )
+
+    @staticmethod
+    def problem_type_to_detail_model(
+        problem_type: ProblemType,
+    ) -> Type[ProblemDetails]:
+        detail_model = PROBLEM_DETAIL_TYPE_MAPPING.get(problem_type)
+        if not detail_model:
+            raise ValueError(f"unknown problem type: {problem_type}")
+        return detail_model
+
+    @field_validator("details", mode="after")
+    @classmethod
+    def _validate_details_by_type(
+        cls, value: dict[str, Any], info: ValidationInfo
+    ) -> ProblemDetails:
+        problem_type: ProblemType | None = info.data.get("type")
+        if not problem_type:
+            raise ValueError("unable to determine problem type")
+        detail_model = cls.problem_type_to_detail_model(problem_type)
+        adapter = TypeAdapter(detail_model)
+        return adapter.validate_python(value)
 
 
 class _ProblemSetAsyncAttrs:
@@ -61,6 +96,12 @@ class DBProblemSet(Base, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
     __tablename__ = "problemset"
     id: UUID = Field(default_factory=uuid7, primary_key=True)
     name: str
+    created_by: UUID | None = None
+    description: str | None = None
+    created_at: datetime = Field(
+        default_factory=utcnow,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
     problems: list[DBProblem] = Relationship(
         back_populates="problemset",

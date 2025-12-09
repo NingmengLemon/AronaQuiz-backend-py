@@ -134,5 +134,5 @@ async def random(
     _: LoginRequired,
     problemset_id: UUID = Query(),
     n: int = Query(20),
-) -> list[ProblemSubmit]:
+) -> list[ProblemResponse]:
     return await sample(session, problemset_id=problemset_id, n=n)

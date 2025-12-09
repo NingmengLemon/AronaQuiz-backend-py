@@ -4,7 +4,7 @@
         "problems": [
             {
                 "content": "[基础] 以下哪个不是Python的合法标识符?",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -30,7 +30,7 @@
             },
             {
                 "content": "[基础] Python中的列表推导式和生成器表达式的区别在于:",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -56,7 +56,7 @@
             },
             {
                 "content": "[进阶] 以下关于Python装饰器的说法，哪些是正确的?",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -82,7 +82,7 @@
             },
             {
                 "content": "[进阶] 如果在函数内部没有使用global声明，而直接对变量赋值，会发生什么情况?",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -108,7 +108,7 @@
             },
             {
                 "content": "[进阶] 关于asyncio和多线程的描述，以下选项哪些正确？",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -133,34 +133,34 @@
                 ]
             },
             {
-                "content": "[进阶] 以下关于Python多进程模块multiprocessing的描述，哪个正确？",
-                "type": "single_select",
+                "content": "[进阶] 以下关于Python多进程模块multipleprocessing的描述，哪个正确？",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
-                        "content": "multiprocessing模块通过fork新进程来绕过GIL限制，实现多CPU并行",
+                        "content": "multipleprocessing模块通过fork新进程来绕过GIL限制，实现多CPU并行",
                         "is_correct": true
                     },
                     {
                         "order": 1,
-                        "content": "multiprocessing模块无法在Windows上使用",
+                        "content": "multipleprocessing模块无法在Windows上使用",
                         "is_correct": false
                     },
                     {
                         "order": 2,
-                        "content": "multiprocessing模块只用于网络编程",
+                        "content": "multipleprocessing模块只用于网络编程",
                         "is_correct": false
                     },
                     {
                         "order": 3,
-                        "content": "multiprocessing模块不支持Pool并行",
+                        "content": "multipleprocessing模块不支持Pool并行",
                         "is_correct": false
                     }
                 ]
             },
             {
                 "content": "[基础] Python的collections模块中，哪种容器类型是计数容器，用于统计元素出现次数？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -186,7 +186,7 @@
             },
             {
                 "content": "[基础] 使用requests库发送GET请求时，获取响应内容的属性是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -212,7 +212,7 @@
             },
             {
                 "content": "[进阶] 下列哪个命令用于在Python项目目录中生成requirements.txt文件？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -238,7 +238,7 @@
             },
             {
                 "content": "[进阶] 使用ctypes调用C库时，以下哪个步骤是必要的？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -264,7 +264,7 @@
             },
             {
                 "content": "[基础] 在Python中，类型注解的作用是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -290,7 +290,7 @@
             },
             {
                 "content": "[进阶] 使用with语句时需要实现的魔法方法是:",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -316,7 +316,7 @@
             },
             {
                 "content": "[基础] 匿名函数（lambda）与def定义的普通函数相比，以下说法正确的是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -342,7 +342,7 @@
             },
             {
                 "content": "[挑战] Python 的全局解释器锁（GIL）对多线程有什么影响？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -368,7 +368,7 @@
             },
             {
                 "content": "[基础] 以下代码 `x = [i*i for i in range(5)]` 会得到：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -394,7 +394,7 @@
             },
             {
                 "content": "[挑战] 关于Python描述符（descriptor），下列描述正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -420,7 +420,7 @@
             },
             {
                 "content": "[基础] 在Python中，下列哪项是迭代器（iterator）而不是可迭代对象（iterable）？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -446,7 +446,7 @@
             },
             {
                 "content": "[基础] Python中 '==' 与 'is' 区别是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -472,11 +472,11 @@
             },
             {
                 "content": "[进阶] 在Python中，如果需要 CPU 密集型计算任务充分利用多核，可以使用：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
-                        "content": "multiprocessing 模块创建多个进程",
+                        "content": "multipleprocessing 模块创建多个进程",
                         "is_correct": true
                     },
                     {
@@ -498,7 +498,7 @@
             },
             {
                 "content": "[基础] Python 3 中内置函数 map() 返回的是列表。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -519,7 +519,7 @@
         "problems": [
             {
                 "content": "[基础] 在Kotlin中，声明不可变变量使用的关键字是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -545,7 +545,7 @@
             },
             {
                 "content": "[基础] Kotlin的数据类（data class）自动为属性生成了什么？",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -571,7 +571,7 @@
             },
             {
                 "content": "[基础] 以下哪些是Kotlin中的空安全特性？",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -597,7 +597,7 @@
             },
             {
                 "content": "[基础] Kotlin 中的 when 表达式功能类似于 Java 的什么？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -623,7 +623,7 @@
             },
             {
                 "content": "[基础] Kotlin 中字符串模板可以使用以下哪种符号插入变量值：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -649,7 +649,7 @@
             },
             {
                 "content": "[进阶] Kotlin协程（coroutine）中的 suspend 关键字表示：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -675,7 +675,7 @@
             },
             {
                 "content": "[进阶] Kotlin扩展函数允许：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -701,7 +701,7 @@
             },
             {
                 "content": "[进阶] 以下关于 Kotlin Lambda 表达式的说法，哪些是正确的？",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -727,7 +727,7 @@
             },
             {
                 "content": "[进阶] Kotlin 泛型中的 `reified` 关键字用于：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -753,7 +753,7 @@
             },
             {
                 "content": "[进阶] Kotlin 密封类（sealed class）的用途是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -779,7 +779,7 @@
             },
             {
                 "content": "[进阶] 使用 Kotlin 扩展函数可以实现：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -805,7 +805,7 @@
             },
             {
                 "content": "[进阶] Kotlin 中，以下哪个关键字用于声明不可变变量：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -831,7 +831,7 @@
             },
             {
                 "content": "[基础] Kotlin 中使用 var 声明的变量必须在声明时初始化。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -852,7 +852,7 @@
         "problems": [
             {
                 "content": "[基础] 在Rust中，默认情况下变量是可变的吗？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -878,7 +878,7 @@
             },
             {
                 "content": "[基础] Rust 中，`String` 和 `&str` 的区别在于：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -904,7 +904,7 @@
             },
             {
                 "content": "[进阶] 以下关于 Rust 所有权机制的说法正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -930,7 +930,7 @@
             },
             {
                 "content": "[进阶] Rust 的借用（borrowing）机制中，如果一个变量被可变借用，那么：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -956,7 +956,7 @@
             },
             {
                 "content": "[基础] Rust 中使用 `match` 表达式时，必须：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -982,7 +982,7 @@
             },
             {
                 "content": "[基础] Rust的编译器 Cargo 默认的包管理文件名是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1008,7 +1008,7 @@
             },
             {
                 "content": "[基础] 在 Rust 中 `Option<T>` 类型用于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1034,7 +1034,7 @@
             },
             {
                 "content": "[基础] 以下关于 `Result<T, E>` 的说法正确的是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1060,7 +1060,7 @@
             },
             {
                 "content": "[进阶] Rust 中，为了实现多线程，常用的启动新线程的函数是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1086,7 +1086,7 @@
             },
             {
                 "content": "[进阶] 以下关于 Rust trait 的描述正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -1112,7 +1112,7 @@
             },
             {
                 "content": "[基础] 在 Rust 中使用 `format!` 宏，作用是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1138,7 +1138,7 @@
             },
             {
                 "content": "[挑战] 在 Rust 中使用 unsafe 块可以：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1164,7 +1164,7 @@
             },
             {
                 "content": "[基础] 在 Rust 中，表示可变引用的符号是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1190,7 +1190,7 @@
             },
             {
                 "content": "[基础] Rust 语言有垃圾回收机制。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1206,7 +1206,7 @@
             },
             {
                 "content": "[基础] 在 Rust 中，标准 String 类型不能包含空字符（'\\0'）。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1227,7 +1227,7 @@
         "problems": [
             {
                 "content": "[基础] 在 Dart 中，使用 var 声明变量的含义是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1253,7 +1253,7 @@
             },
             {
                 "content": "[基础] 以下哪个关键字用于在 Dart 中定义常量（编译时确定的值）？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1279,7 +1279,7 @@
             },
             {
                 "content": "[基础] 在 Flutter 中，StatelessWidget 和 StatefulWidget 的区别是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -1305,7 +1305,7 @@
             },
             {
                 "content": "[基础] Flutter 中热重载（hot reload）和热重启（hot restart）主要区别是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1331,7 +1331,7 @@
             },
             {
                 "content": "[基础] 在 Flutter 代码中更新界面状态通常使用的方法是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1357,7 +1357,7 @@
             },
             {
                 "content": "[进阶] Dart 中，表示异步操作的类型是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1383,7 +1383,7 @@
             },
             {
                 "content": "[进阶] 在 Dart 2 中引入的空安全特性，以下语句不正确的是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1409,7 +1409,7 @@
             },
             {
                 "content": "[基础] 在 Dart 中，mixin 的作用是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1435,7 +1435,7 @@
             },
             {
                 "content": "[基础] Flutter 中，以下哪个 Widget 用于水平布局？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1461,7 +1461,7 @@
             },
             {
                 "content": "[基础] 在 Flutter 中构建 UI 时，需要写在哪个文件中声明依赖包的版本？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1487,7 +1487,7 @@
             },
             {
                 "content": "[进阶] Dart 中，使用 async/await 时需要返回 Future 类型或者 void，以下关于 async 函数的说法正确的是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1513,7 +1513,7 @@
             },
             {
                 "content": "[进阶] 在 Flutter 中，State 对象何时创建？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1539,7 +1539,7 @@
             },
             {
                 "content": "[基础] Dart 的 List、Set、Map 属于哪种数据类型？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1565,7 +1565,7 @@
             },
             {
                 "content": "[挑战] 关于 Dart 的 isolate，以下说法正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -1591,7 +1591,7 @@
             },
             {
                 "content": "[基础] Flutter 中，一切都是 Widget。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1612,7 +1612,7 @@
         "problems": [
             {
                 "content": "[基础] 在 C 中，下列哪种语句用于包含头文件？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1638,7 +1638,7 @@
             },
             {
                 "content": "[基础] 在 C++ 中，struct 和 class 区别在于默认访问控制和继承权限是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1664,7 +1664,7 @@
             },
             {
                 "content": "[基础] 以下哪个不是 C 的保留关键字？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1690,7 +1690,7 @@
             },
             {
                 "content": "[进阶] 在 C++ 中，new 与 malloc 的主要区别是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1716,7 +1716,7 @@
             },
             {
                 "content": "[基础] 在 C++ 中，指针可以使用哪个运算符访问成员函数？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1742,7 +1742,7 @@
             },
             {
                 "content": "[基础] 以下关于 C++ 引用（reference）的描述正确的是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1768,7 +1768,7 @@
             },
             {
                 "content": "[进阶] 关于 C++ 智能指针说法正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -1794,7 +1794,7 @@
             },
             {
                 "content": "[基础] 在 C 语言中，给指针赋值 NULL 的目的是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1820,7 +1820,7 @@
             },
             {
                 "content": "[基础] 关于 C 的预处理器，以下说法正确的是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1846,7 +1846,7 @@
             },
             {
                 "content": "[进阶] 在 C++ 中，当类中有虚函数时，以下说法正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -1872,7 +1872,7 @@
             },
             {
                 "content": "[基础] C++11 中，auto 关键字用于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1898,7 +1898,7 @@
             },
             {
                 "content": "[进阶] 在 C 中，使用 static 关键字修饰全局变量意味着：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1924,7 +1924,7 @@
             },
             {
                 "content": "[基础] C/C++ 中，常见的内存泄漏原因是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1949,8 +1949,8 @@
                 ]
             },
             {
-                "content": "[挑战] 关于 C++ 中的多重继承（multiple inheritance），以下说法正确的是：",
-                "type": "single_select",
+                "content": "[挑战] 关于 C++ 中的多重继承（multipleple inheritance），以下说法正确的是：",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1976,7 +1976,7 @@
             },
             {
                 "content": "[基础] 在 C 语言中，如果 main 函数定义为 int 类型，没有 return 语句默认返回 0。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -1997,7 +1997,7 @@
         "problems": [
             {
                 "content": "[基础] 在 C# 中，声明不可变变量通常使用的关键字是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2023,7 +2023,7 @@
             },
             {
                 "content": "[基础] 以下哪个是 C# 的匿名函数语法？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2049,7 +2049,7 @@
             },
             {
                 "content": "[基础] C# 中，字符串插值使用的是以下哪种符号？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2075,7 +2075,7 @@
             },
             {
                 "content": "[进阶] C# 中的 LINQ (Language-Integrated Query) 可以用于：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2101,7 +2101,7 @@
             },
             {
                 "content": "[基础] 在 C# 中，`var` 关键字用于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2127,7 +2127,7 @@
             },
             {
                 "content": "[进阶] 以下关于 C# 接口 (interface) 的说法正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2153,7 +2153,7 @@
             },
             {
                 "content": "[基础] C# 中的结构体 (struct) 与类 (class) 的区别在于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2179,7 +2179,7 @@
             },
             {
                 "content": "[进阶] C# 中，以下哪个关键字用于声明异步方法：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2205,7 +2205,7 @@
             },
             {
                 "content": "[进阶] 以下关于 C# 中的 async/await 的说法正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2231,7 +2231,7 @@
             },
             {
                 "content": "[基础] 在 C# 中，delegate 关键字用于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2257,7 +2257,7 @@
             },
             {
                 "content": "[基础] C# 的 foreach 循环可以用于遍历什么类型的集合？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2283,7 +2283,7 @@
             },
             {
                 "content": "[基础] 在 C# 中，字符串比较应使用以下哪个方法：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2309,7 +2309,7 @@
             },
             {
                 "content": "[进阶] 以下关于 C# GC（垃圾回收）的说法正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2335,7 +2335,7 @@
             },
             {
                 "content": "[基础] 在 C# 中，所有类型最终都继承自 System.Object。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2351,7 +2351,7 @@
             },
             {
                 "content": "[基础] C# 中 string 类型是值类型。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2372,7 +2372,7 @@
         "problems": [
             {
                 "content": "[基础] 数组（array）和链表（linked list）的主要区别在于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2398,7 +2398,7 @@
             },
             {
                 "content": "[基础] 以下哪种数据结构使用 LIFO（后进先出）原则：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2424,7 +2424,7 @@
             },
             {
                 "content": "[基础] 以下排序算法中，最坏情况下时间复杂度为 O(n^2) 的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2450,7 +2450,7 @@
             },
             {
                 "content": "[基础] 对于一个已排序的数组，查找一个元素最有效的方法是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2476,7 +2476,7 @@
             },
             {
                 "content": "[基础] 哈希表中的冲突（collision）常用的解决方法有：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2502,7 +2502,7 @@
             },
             {
                 "content": "[基础] 图的广度优先搜索（BFS）主要使用的数据结构是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2528,7 +2528,7 @@
             },
             {
                 "content": "[基础] 有向图中，从结点 A 到 B 存在路径，当图中不存在环时，可使用以下算法查找路径：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2554,7 +2554,7 @@
             },
             {
                 "content": "[进阶] 下列排序算法中，平均时间复杂度最好的是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2580,7 +2580,7 @@
             },
             {
                 "content": "[基础] 堆（Heap）通常用什么数据结构实现？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2606,7 +2606,7 @@
             },
             {
                 "content": "[进阶] 二叉搜索树（BST）在插入顺序极端（升序或降序）时，会退化为：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2632,7 +2632,7 @@
             },
             {
                 "content": "[基础] 哈希表（HashMap）查找元素的平均时间复杂度是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2658,7 +2658,7 @@
             },
             {
                 "content": "[基础] 广度优先搜索和深度优先搜索的主要区别在于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2684,7 +2684,7 @@
             },
             {
                 "content": "[基础] 在图论中，若要求最小生成树，可使用以下算法：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2710,7 +2710,7 @@
             },
             {
                 "content": "[基础] 动态规划（Dynamic Programming）的核心思想是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2736,7 +2736,7 @@
             },
             {
                 "content": "[进阶] 以下哪些问题可以使用动态规划求解？",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2762,7 +2762,7 @@
             },
             {
                 "content": "[进阶] 如果一个问题的候选解可以在多项式时间内被验证，那么该问题属于 NP 类问题。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2783,7 +2783,7 @@
         "problems": [
             {
                 "content": "[基础] 操作系统中，进程（process）和线程（thread）的主要区别在于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2809,7 +2809,7 @@
             },
             {
                 "content": "[基础] 下面哪种算法属于抢占式调度：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2835,7 +2835,7 @@
             },
             {
                 "content": "[基础] 死锁的必要条件不包括：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2861,7 +2861,7 @@
             },
             {
                 "content": "[基础] 虚拟内存（virtual memory）的主要作用是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2887,7 +2887,7 @@
             },
             {
                 "content": "[进阶] 以下关于分页（paging）和分段（segmentation）的说法正确的是：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -2913,7 +2913,7 @@
             },
             {
                 "content": "[基础] 在操作系统中，条件变量（condition variable）通常与以下哪种同步原语一起使用：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2939,7 +2939,7 @@
             },
             {
                 "content": "[基础] Linux 中，每个进程的资源信息可以在以下哪个虚拟文件系统中找到：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2965,7 +2965,7 @@
             },
             {
                 "content": "[进阶] 以下页面置换算法属于高效利用最近使用的信息：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -2991,7 +2991,7 @@
             },
             {
                 "content": "[基础] 操作系统中，缓冲区（buffer）和缓存（cache）的主要区别在于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3017,7 +3017,7 @@
             },
             {
                 "content": "[基础] 短期调度（short-term scheduling）通常是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3043,7 +3043,7 @@
             },
             {
                 "content": "[基础] 操作系统中的多道程序设计与多线程是相同的概念。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3059,7 +3059,7 @@
             },
             {
                 "content": "[基础] 进程的虚拟地址空间是独立的，进程之间不会共享虚拟地址空间。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3075,7 +3075,7 @@
             },
             {
                 "content": "[基础] 饥饿（starvation）是指某个进程长期无法获得资源，即使其他资源可用。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3096,7 +3096,7 @@
         "problems": [
             {
                 "content": "[基础] 计算机网络中，OSI七层模型中，传输层（Transport Layer）对应的协议包括：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -3122,7 +3122,7 @@
             },
             {
                 "content": "[基础] TCP 与 UDP 的主要区别在于：",
-                "type": "multi_select",
+                "type": "multiple",
                 "options": [
                     {
                         "order": 0,
@@ -3148,7 +3148,7 @@
             },
             {
                 "content": "[基础] HTTP 协议通常使用哪个传输层协议？",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3174,7 +3174,7 @@
             },
             {
                 "content": "[基础] DNS（域名解析）使用的端口号是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3200,7 +3200,7 @@
             },
             {
                 "content": "[基础] 在网络中，IP 地址与 MAC 地址的区别是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3226,7 +3226,7 @@
             },
             {
                 "content": "[基础] 以下哪个是 DHCP 的作用：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3252,7 +3252,7 @@
             },
             {
                 "content": "[基础] 在TCP三次握手中，第二次报文（Server->Client）是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3278,7 +3278,7 @@
             },
             {
                 "content": "[基础] 在计算机网络中，ARP 协议的作用是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3304,7 +3304,7 @@
             },
             {
                 "content": "[基础] TLS/SSL 主要用于：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3330,7 +3330,7 @@
             },
             {
                 "content": "[基础] Ping 工具主要使用哪种协议：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3356,7 +3356,7 @@
             },
             {
                 "content": "[基础] 在 IP 协议中，默认的子网掩码 /24 表示主机数最大值是：",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3382,7 +3382,7 @@
             },
             {
                 "content": "[基础] 网络协议端口号的范围是 0 到 65535。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,
@@ -3398,7 +3398,7 @@
             },
             {
                 "content": "[基础] FTP 协议的默认控制端口是 21。",
-                "type": "single_select",
+                "type": "single",
                 "options": [
                     {
                         "order": 0,

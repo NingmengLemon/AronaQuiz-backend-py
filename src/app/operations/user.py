@@ -42,7 +42,7 @@ async def create_user(
     password: str,
     nickname: str,
     role: UserRole = UserRole.USER,
-) -> UUID:
+) -> DBUser:
     hashed_passwd = await hash(password)
     user = DBUser(
         email=email,
@@ -55,4 +55,4 @@ async def create_user(
     await session.flush()
     await session.refresh(user)
     # await session.commit()
-    return user.id
+    return user

@@ -1,26 +1,20 @@
 from enum import StrEnum, auto
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
+from app.models.db.problem import ProblemDetails, ProblemType
 from app.models.db.user import UserRole
 
-from ._base import (
-    BaseOption,
-    BaseProblem,
-    BaseProblemSet,
-    BaseStatistic,
-    BaseUser,
-)
+from .base import BaseUser
 
 
-class OptionResponse(BaseOption):
+class ProblemResponse(BaseModel):
     id: UUID
-
-
-class ProblemResponse(BaseProblem):
-    id: UUID
-    options: list[OptionResponse]
+    type: ProblemType
+    content: str
+    explanation: str | None
+    details: ProblemDetails
 
 
 class UserInfoResponse(BaseUser):
@@ -31,18 +25,10 @@ class SelfInfoResponse(UserInfoResponse):
     role: UserRole
 
 
-class ProblemSetResponse(BaseProblemSet):
-    count: int
+class ProblemSetResponse(BaseModel):
     id: UUID
-
-
-class SingleUserStatResponse(BaseStatistic):
-    problem_id: UUID
-    user_id: UUID
-
-
-class UserStatResponse(BaseUser):
-    problems: list[SingleUserStatResponse] = Field(default_factory=list)
+    name: str
+    count: int
 
 
 class ProblemSetCreateStatus(StrEnum):
@@ -55,8 +41,8 @@ class ProblemSetCreateResponse(BaseModel):
     status: ProblemSetCreateStatus
 
 
-class UserCreateResponse(BaseModel):
-    user_id: UUID
+class UserCreateResponse(SelfInfoResponse):
+    pass
 
 
 class RefreshTokenResponse(BaseModel):

@@ -33,7 +33,7 @@ async def setup_test_data(
     logger.info("Setting up test data fixture.")
     async with test_session_getter() as session:
         # 创建测试用户
-        common_user_id = await create_user(
+        common_user = await create_user(
             session,
             "commonuser",
             email="common@example.com",
@@ -41,7 +41,7 @@ async def setup_test_data(
             password=PASSWORD_FOR_TEST,
             role=UserRole.USER,
         )
-        admin_id = await create_user(
+        admin = await create_user(
             session,
             "admin",
             email="admin@example.com",
@@ -49,7 +49,7 @@ async def setup_test_data(
             password=PASSWORD_FOR_TEST,
             role=UserRole.ADMIN,
         )
-        su_id = await create_user(
+        su = await create_user(
             session,
             "superuser",
             email="su@example.com",
@@ -61,9 +61,9 @@ async def setup_test_data(
 
     logger.info("Test data fixture setup complete.")
     return PreparedTestData(
-        common_user_id,
-        admin_id,
-        su_id,
+        common_user.id,
+        admin.id,
+        su.id,
     )
 
 
@@ -178,22 +178,28 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "Python是一种什么类型的语言？",
-                "type": "single_select",
-                "options": [
-                    {"content": "编译型语言", "is_correct": False, "order": 0},
-                    {"content": "解释型语言", "is_correct": True, "order": 1},
-                    {"content": "汇编语言", "is_correct": False, "order": 2},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "编译型语言", "is_correct": False, "order": 0},
+                        {"content": "解释型语言", "is_correct": True, "order": 1},
+                        {"content": "汇编语言", "is_correct": False, "order": 2},
+                    ],
+                },
             },
             {
                 "content": "以下哪些是Python的数据类型？",
-                "type": "multi_select",
-                "options": [
-                    {"content": "list", "is_correct": True, "order": 0},
-                    {"content": "dict", "is_correct": True, "order": 1},
-                    {"content": "array", "is_correct": False, "order": 2},
-                    {"content": "tuple", "is_correct": True, "order": 3},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "multiple",
+                    "options": [
+                        {"content": "list", "is_correct": True, "order": 0},
+                        {"content": "dict", "is_correct": True, "order": 1},
+                        {"content": "array", "is_correct": False, "order": 2},
+                        {"content": "tuple", "is_correct": True, "order": 3},
+                    ],
+                },
             },
         ]
 
@@ -221,10 +227,13 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "测试问题",
-                "type": "single_select",
-                "options": [
-                    {"content": "选项A", "is_correct": True, "order": 0},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "选项A", "is_correct": True, "order": 0},
+                    ],
+                },
             }
         ]
 
@@ -251,19 +260,25 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "Python编程语言的特点",
-                "type": "single_select",
-                "options": [
-                    {"content": "简单易学", "is_correct": True, "order": 0},
-                    {"content": "编译执行", "is_correct": False, "order": 1},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "简单易学", "is_correct": True, "order": 0},
+                        {"content": "编译执行", "is_correct": False, "order": 1},
+                    ],
+                },
             },
             {
                 "content": "Java是一种编程语言",
-                "type": "single_select",
-                "options": [
-                    {"content": "是的", "is_correct": True, "order": 0},
-                    {"content": "不是", "is_correct": False, "order": 1},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "是的", "is_correct": True, "order": 0},
+                        {"content": "不是", "is_correct": False, "order": 1},
+                    ],
+                },
             },
         ]
 
@@ -330,17 +345,23 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "测试题目1",
-                "type": "single_select",
-                "options": [
-                    {"content": "答案1", "is_correct": True, "order": 0},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "答案1", "is_correct": True, "order": 0},
+                    ],
+                },
             },
             {
                 "content": "测试题目2",
-                "type": "single_select",
-                "options": [
-                    {"content": "答案2", "is_correct": True, "order": 0},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "答案2", "is_correct": True, "order": 0},
+                    ],
+                },
             },
         ]
 
@@ -385,17 +406,23 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "计数测试题目1",
-                "type": "single_select",
-                "options": [
-                    {"content": "答案1", "is_correct": True, "order": 0},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "答案1", "is_correct": True, "order": 0},
+                    ],
+                },
             },
             {
                 "content": "计数测试题目2",
-                "type": "single_select",
-                "options": [
-                    {"content": "答案2", "is_correct": True, "order": 0},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "答案2", "is_correct": True, "order": 0},
+                    ],
+                },
             },
         ]
 
@@ -442,10 +469,13 @@ class TestProblemAPIs:
             problem_data.append(
                 {
                     "content": f"抽样测试题目{i}",
-                    "type": "single_select",
-                    "options": [
-                        {"content": f"答案{i}", "is_correct": True, "order": 0},
-                    ],
+                    "type": "selective",
+                    "details": {
+                        "type": "single",
+                        "options": [
+                            {"content": f"答案{i}", "is_correct": True, "order": 0},
+                        ],
+                    },
                 }
             )
 
@@ -491,17 +521,23 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "待删除题目1",
-                "type": "single_select",
-                "options": [
-                    {"content": "答案1", "is_correct": True, "order": 0},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "答案1", "is_correct": True, "order": 0},
+                    ],
+                },
             },
             {
                 "content": "待删除题目2",
-                "type": "single_select",
-                "options": [
-                    {"content": "答案2", "is_correct": True, "order": 0},
-                ],
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "答案2", "is_correct": True, "order": 0},
+                    ],
+                },
             },
         ]
 
@@ -610,8 +646,8 @@ class TestUserAPIs:
         )
         result = resp.json()
         assert resp.status_code == 200, result
-        assert "user_id" in result
-        assert isinstance(UUID(result["user_id"]), UUID)
+        assert "id" in result
+        assert isinstance(UUID(result["id"]), UUID)
 
     @pytest.mark.asyncio
     async def test_user_register_duplicate_username(

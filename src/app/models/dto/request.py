@@ -1,16 +1,28 @@
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
 
-from ._base import BaseOption, BaseProblem, BaseProblemSet, BaseUser
+from app.models.db.problem import ProblemType, SelectiveProblemDetails
+
+from .base import BaseUser
 
 
-class OptionSubmit(BaseOption):
-    pass
+class BaseProblem(BaseModel):
+    content: str
 
 
-class ProblemSubmit(BaseProblem):
-    options: list[OptionSubmit]
+class BaseProblemSet(BaseModel):
+    name: str
+    explanation: str | None = None
+
+
+class SelectiveProblemSubmit(BaseProblem):
+    type: Literal[ProblemType.SELECTIVE] = ProblemType.SELECTIVE
+    details: SelectiveProblemDetails
+
+
+type ProblemSubmit = SelectiveProblemSubmit  # |...
 
 
 class ProblemSetSubmit(BaseProblemSet):
