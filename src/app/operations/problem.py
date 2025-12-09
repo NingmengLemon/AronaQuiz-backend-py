@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped
-from sqlmodel import cast, col, delete, func, or_, select
+from sqlmodel import cast, col, delete, desc, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.problem import (
@@ -21,9 +21,7 @@ from app.utils.db import in_transaction
 
 
 @in_transaction()
-async def create_problemset(
-    session: AsyncSession, name: str
-) -> tuple[UUID, str]:
+async def create_problemset(session: AsyncSession, name: str) -> tuple[UUID, str]:
     """创建题目集，返回 (id, status)"""
     name = name.strip()
     problemset = (
@@ -89,27 +87,34 @@ async def search_problem(
     page: int = 1,
     page_size: int = 20,
 ) -> list[ProblemResponse]:
+    """优化后的搜索查询，减少不必要的distinct操作"""
     stmt = select(DBProblem)
+
+    # 先应用过滤条件
     if problemset_id:
         stmt = stmt.where(DBProblem.problemset_id == problemset_id)
     if problem_type:
         stmt = stmt.where(DBProblem.type == problem_type)
+
+    # 优化关键词搜索逻辑
     if kw:
-        if problem_type == ProblemType.SELECTIVE:
-            # selective 类型的选项文本搜索
-            stmt = stmt.filter(
-                or_(
-                    col(DBProblem.content).icontains(kw),
-                    cast(col(DBProblem.details), Text).icontains(kw),
+        kw = kw.strip()
+        if kw:
+            if problem_type == ProblemType.SELECTIVE:
+                # 使用更精确的搜索条件，避免distinct
+                stmt = stmt.where(
+                    or_(
+                        col(DBProblem.content).icontains(kw),
+                        cast(col(DBProblem.details), Text).icontains(kw),
+                    )
                 )
-            ).distinct()
-        else:
-            stmt = stmt.filter(
-                or_(
-                    col(DBProblem.content).icontains(kw),
-                )
-            ).distinct()
+            else:
+                stmt = stmt.where(col(DBProblem.content).icontains(kw))
+
+    # 添加分页
     stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+
+    # 执行查询
     db_problems = await session.exec(stmt)
     return [
         ProblemResponse.model_validate(p, from_attributes=True) for p in db_problems
@@ -146,10 +151,11 @@ async def delete_problemset(session: AsyncSession, problemset_id: UUID) -> None 
 async def get_problem_count(
     session: AsyncSession, problemset_id: UUID | None = None
 ) -> int:
-    stmt = select(func.count())
+    """优化后的计数查询，使用更高效的查询方式"""
+    stmt = select(func.count()).select_from(DBProblem)
     if problemset_id:
         stmt = stmt.where(DBProblem.problemset_id == problemset_id)
-    return (await session.exec(stmt.select_from(DBProblem))).one()
+    return (await session.exec(stmt)).one()
 
 
 async def sample(
@@ -167,16 +173,24 @@ async def sample(
 
 
 async def list_problemset(session: AsyncSession) -> list[ProblemSetResponse]:
-    dbproblemsets = (await session.exec(select(DBProblemSet))).all()
-    return [
-        ProblemSetResponse(id=ps.id, name=ps.name, count=cnt)
-        for ps, cnt in zip(
-            dbproblemsets,
-            [
-                (await get_problem_count(session, problemset_id=ps_.id))
-                for ps_ in dbproblemsets
-            ],
+    stmt = (
+        select(
+            col(DBProblemSet.id),
+            col(DBProblemSet.name),
+            func.count(col(DBProblem.id)).label("problem_count"),
         )
+        .select_from(DBProblemSet)
+        .outerjoin(DBProblem, col(DBProblem.problemset_id) == col(DBProblemSet.id))
+        .group_by(
+            col(DBProblemSet.id), col(DBProblemSet.name), col(DBProblemSet.created_at)
+        )
+        .order_by(desc(col(DBProblemSet.created_at)))
+    )
+
+    results = await session.exec(stmt)
+    return [
+        ProblemSetResponse(id=problemset_id, name=name, count=count or 0)
+        for problemset_id, name, count in results
     ]
 
 
