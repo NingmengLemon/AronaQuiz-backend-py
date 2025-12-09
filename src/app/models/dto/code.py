@@ -1,0 +1,56 @@
+from enum import IntEnum
+
+
+class BusinessCode(IntEnum):
+    """业务状态码枚举
+
+    - 1xxx: 通用成功状态码
+    - 2xxx: 通用错误状态码
+    - 3xxx: 用户相关状态码
+    - 4xxx: 题目相关状态码
+    - 5xxx: 会话相关状态码
+    - 9xxx: 系统内部错误
+    """
+
+    # 通用成功状态码 (1000-1099)
+    SUCCESS = 1000
+    CREATED = 1001
+    UPDATED = 1002
+    DELETED = 1003
+
+    # 通用错误状态码 (2000-2099)
+    BAD_REQUEST = 2000
+    UNAUTHORIZED = 2001
+    FORBIDDEN = 2002
+    NOT_FOUND = 2003
+    CONFLICT = 2004
+    VALIDATION_ERROR = 2005
+
+    # 用户相关状态码 (3000-3099)
+    USER_NOT_FOUND = 3000
+    USER_ALREADY_EXISTS = 3001
+    USERNAME_INVALID = 3002
+    EMAIL_INVALID = 3003
+    NICKNAME_INVALID = 3004
+    EMAIL_ALREADY_EXISTS = 3005
+    USERNAME_ALREADY_EXISTS = 3006
+    NICKNAME_ALREADY_EXISTS = 3007
+
+    # 题目相关状态码 (4000-4099)
+    PROBLEM_NOT_FOUND = 4000
+    PROBLEMSET_NOT_FOUND = 4001
+    PROBLEM_ALREADY_EXISTS = 4002
+    PROBLEMSET_ALREADY_EXISTS = 4003
+
+    # 会话相关状态码 (5000-5099)
+    SESSION_EXPIRED = 5000
+    SESSION_INVALID = 5001
+    ALREADY_LOGGED_IN = 5002
+    LOGIN_FAILED = 5003
+    LOGOUT_FAILED = 5004
+    TOKEN_REFRESH_FAILED = 5005
+
+    # 系统内部错误 (9000-9099)
+    INTERNAL_ERROR = 9000
+    DATABASE_ERROR = 9001
+    UNKNOWN_ERROR = 9999

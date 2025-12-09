@@ -15,7 +15,6 @@ from app.models.db.problem import (
 from app.models.dto.request import ProblemSubmit
 from app.models.dto.response import (
     ProblemResponse,
-    ProblemSetCreateStatus,
     ProblemSetResponse,
 )
 from app.utils.db import in_transaction
@@ -24,18 +23,19 @@ from app.utils.db import in_transaction
 @in_transaction()
 async def create_problemset(
     session: AsyncSession, name: str
-) -> tuple[UUID, ProblemSetCreateStatus]:
+) -> tuple[UUID, str]:
+    """创建题目集，返回 (id, status)"""
     name = name.strip()
     problemset = (
         await session.exec(select(DBProblemSet).where(DBProblemSet.name == name))
     ).one_or_none()
     if problemset is not None:
-        return problemset.id, ProblemSetCreateStatus.ALREADY_EXISTS
+        return problemset.id, "ALREADY_EXISTS"
     problemset = DBProblemSet(name=name, problems=[])
     session.add(problemset)
     await session.flush()
     # await session.commit()
-    return problemset.id, ProblemSetCreateStatus.SUCCESS
+    return problemset.id, "SUCCESS"
 
 
 @in_transaction()
