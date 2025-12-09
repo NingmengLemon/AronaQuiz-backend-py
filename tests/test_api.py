@@ -175,7 +175,7 @@ class TestProblemAPIs:
         result = resp.json()
         assert resp.status_code == 200, result
         assert result["success"] is False
-        assert result["code"] == BusinessCode.CONFLICT  # CONFLICT
+        assert result["code"] == BusinessCode.PROBLEMSET_ALREADY_EXISTS
         assert UUID(result["data"]["id"]) == test_problemset
 
     @pytest.mark.asyncio
@@ -261,9 +261,7 @@ class TestProblemAPIs:
         result = resp.json()
         assert resp.status_code == 200, result
         assert result["success"] is False
-        assert (
-            result["code"] == BusinessCode.PROBLEMSET_NOT_FOUND
-        )  # PROBLEMSET_NOT_FOUND
+        assert result["code"] == BusinessCode.PROBLEMSET_NOT_FOUND
 
     @pytest.mark.asyncio
     async def test_search_problems(

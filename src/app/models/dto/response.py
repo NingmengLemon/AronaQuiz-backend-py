@@ -15,7 +15,7 @@ T = TypeVar("T")
 class ApiResponse(BaseModel, Generic[T]):
     """统一的API响应格式"""
 
-    code: int = Field(description="业务状态码")
+    code: int = Field(description="状态码")
     message: str = Field(description="响应消息")
     data: T | None = Field(default=None, description="响应数据")
     success: bool = Field(description="是否成功")
