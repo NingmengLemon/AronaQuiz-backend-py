@@ -65,7 +65,9 @@ async def test_client(test_engine: AsyncEngine) -> AsyncGenerator[AsyncClient, N
 
     async def get_test_session_override() -> AsyncGenerator[AsyncSession]:
         async with get_session(test_engine) as session:
+            # async with session.begin():
             yield session
+            await session.commit()
 
     deps.speedlimiter = None
     app.dependency_overrides[deps.get_session_dependency] = get_test_session_override

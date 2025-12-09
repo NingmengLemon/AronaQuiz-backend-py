@@ -40,11 +40,9 @@ def in_transaction() -> Callable[
         async def wrapped(
             session: AsyncSession, *args: P.args, **kwargs: P.kwargs
         ) -> T:
-            async with (
-                session.begin_nested if session.in_transaction() else session.begin
-            )() as transaction:
+            async with auto_begin(session):
                 rv = await func(session, *args, **kwargs)
-                await transaction.commit()
+                # await transaction.commit()
                 return rv
 
         return wrapped
@@ -54,17 +52,11 @@ def in_transaction() -> Callable[
 
 @asynccontextmanager
 async def auto_begin(
-    session: AsyncSession, auto_rollback: bool = True
+    session: AsyncSession,
 ) -> AsyncGenerator[AsyncSessionTransaction, None]:
     nested = session.in_transaction()
-
     async with (session.begin_nested if nested else session.begin)() as t:
-        try:
-            yield t
-        except Exception:
-            if auto_rollback:
-                await session.rollback()
-            raise
+        yield t
 
 
 def to_async(
