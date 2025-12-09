@@ -956,7 +956,10 @@ class TestSessionAPIs:
                 "password": "wrongpassword",
             },
         )
-        assert resp.status_code == 401, resp.json()
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.LOGIN_FAILED
 
     @pytest.mark.asyncio
     async def test_login_with_nonexistent_user(
@@ -971,7 +974,10 @@ class TestSessionAPIs:
                 "password": "anypassword",
             },
         )
-        assert resp.status_code == 401, resp.json()
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.LOGIN_FAILED
 
     @pytest.mark.asyncio
     async def test_logout(
@@ -1032,7 +1038,10 @@ class TestSessionAPIs:
             headers=cu_auth_headers,
             json={"refresh_token": str(uuid4())},
         )
-        assert resp.status_code == 401, resp.json()
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.TOKEN_REFRESH_FAILED
 
     @pytest.mark.asyncio
     async def test_access_protected_endpoint_without_auth(
