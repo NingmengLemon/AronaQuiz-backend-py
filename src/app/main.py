@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import deps
 from app.api import router as api_router
 from app.config import get_settings
+from app.middlewares.exception_handler import register_exception_handlers
 from app.utils.db import new_engine, new_session_getter
 
 
@@ -19,18 +20,24 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     await engine.dispose()
 
 
-app = FastAPI(lifespan=lifespan)
-app.include_router(api_router, prefix="/api")
+def create_app() -> FastAPI:
+    app = FastAPI(lifespan=lifespan)
+    app.include_router(api_router, prefix="/api")
+
+    register_exception_handlers(app)
+
+    PROD_ORIGINS: list[str] = []
+    DEV_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$"
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=PROD_ORIGINS,
+        allow_origin_regex=DEV_ORIGIN_REGEX,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        max_age=600,
+    )
+    return app
 
 
-PROD_ORIGINS: list[str] = []
-DEV_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$"
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=PROD_ORIGINS,
-    allow_origin_regex=DEV_ORIGIN_REGEX,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    max_age=600,
-)
+app = create_app()
