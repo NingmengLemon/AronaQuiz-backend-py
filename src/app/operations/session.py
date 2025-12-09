@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 from uuid import UUID, uuid4
+
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -10,12 +11,14 @@ from app.models.db.session import (
     LoginSessionStatus,
 )
 from app.models.db.user import DBUser
+from app.utils.db import in_transaction
 from app.utils.misc import utcnow
 from app.utils.security import sha256, verify
 
 logger = logging.getLogger("uvicorn.error")
 
 
+@in_transaction()
 async def login(
     session: AsyncSession,
     *,
@@ -45,7 +48,7 @@ async def login(
     )
     session.add(new_session)
     await session.flush()
-    await session.commit()
+    # await session.commit()
     return new_session.access_token, refresh_token
 
 
@@ -64,6 +67,7 @@ async def query_login_session(
     return (await session.exec(select(LoginSession).where(cond))).one_or_none()
 
 
+@in_transaction()
 async def validate_login_session(
     session: AsyncSession, access_token: UUID
 ) -> tuple[LoginSessionStatus, LoginSession | None]:
@@ -79,19 +83,20 @@ async def validate_login_session(
             login_session.status = LoginSessionStatus.EXPIRED
             session.add(login_session)
             await session.flush()
-            await session.commit()
+            # await session.commit()
         return LoginSessionStatus.EXPIRED, None
 
     if login_session.status == LoginSessionStatus.ACTIVE:
         login_session.last_active = now
         session.add(login_session)
         await session.flush()
-        await session.commit()
+        # await session.commit()
         return LoginSessionStatus.ACTIVE, login_session
 
     return LoginSessionStatus.INVALID, None
 
 
+@in_transaction()
 async def refresh_access_token(
     session: AsyncSession, access_token: UUID, refresh_token: UUID
 ) -> tuple[UUID, UUID | None] | None:
@@ -112,10 +117,11 @@ async def refresh_access_token(
     )
     session.add(login_session)
     await session.flush()
-    await session.commit()
+    # await session.commit()
     return new_access_token, None
 
 
+@in_transaction()
 async def logout(session: AsyncSession, access_token: UUID) -> bool:
     login_session = (
         await session.exec(
@@ -127,5 +133,5 @@ async def logout(session: AsyncSession, access_token: UUID) -> bool:
     login_session.status = LoginSessionStatus.REVOKED
     session.add(login_session)
     await session.flush()
-    await session.commit()
+    # await session.commit()
     return True

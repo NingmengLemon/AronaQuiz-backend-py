@@ -1,4 +1,5 @@
 from uuid import UUID
+
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, delete, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -18,6 +19,7 @@ from app.typ import queryable
 from app.utils.db import in_transaction
 
 
+@in_transaction()
 async def create_problemset(
     session: AsyncSession, name: str
 ) -> tuple[UUID, ProblemSetCreateStatus]:
@@ -30,10 +32,11 @@ async def create_problemset(
     problemset = DBProblemSet(name=name, problems=[])
     session.add(problemset)
     await session.flush()
-    await session.commit()
+    # await session.commit()
     return problemset.id, ProblemSetCreateStatus.SUCCESS
 
 
+@in_transaction()
 async def add_problems(
     session: AsyncSession, problemset_id: UUID, *problems: ProblemSubmit
 ) -> list[UUID] | None:
@@ -61,7 +64,7 @@ async def add_problems(
         session.add_all([problem_db, *options_db])
         added_ids.append(problem_id)
     await session.flush()
-    await session.commit()
+    # await session.commit()
     return added_ids
 
 
@@ -115,6 +118,7 @@ async def search_problem(
     return result
 
 
+@in_transaction()
 async def delete_problems(
     session: AsyncSession,
     *problem_ids: UUID,
@@ -126,9 +130,10 @@ async def delete_problems(
     stmt = stmt.where(col(DBOption.problem_id).in_(problem_ids))
     await session.exec(stmt)  # type: ignore
     await session.flush()
-    await session.commit()
+    # await session.commit()
 
 
+@in_transaction()
 async def delete_problemset(session: AsyncSession, problemset_id: UUID) -> None | UUID:
     problemset = (
         await session.exec(select(DBProblemSet).where(DBProblemSet.id == problemset_id))
@@ -140,7 +145,7 @@ async def delete_problemset(session: AsyncSession, problemset_id: UUID) -> None 
         delete(DBProblem).where(col(DBProblem.problemset_id) == problemset_id)  # type: ignore
     )
     await session.flush()
-    await session.commit()
+    # await session.commit()
     return problemset_id
 
 

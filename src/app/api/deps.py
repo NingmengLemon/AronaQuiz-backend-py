@@ -33,7 +33,7 @@ async def get_session_dependency() -> AsyncGenerator[AsyncSession, None]:
     async with session_getter() as session:
         # async with session.begin():
         yield session
-        await session.commit()
+        # await session.commit()
 
 
 DbSessionDep = Annotated[AsyncSession, Depends(get_session_dependency)]

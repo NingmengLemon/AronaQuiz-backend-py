@@ -28,12 +28,14 @@ if get_settings().test_database_url is None:
 
 @pytest_asyncio.fixture(scope="function", name="test_engine")
 async def test_engine() -> AsyncGenerator[AsyncEngine]:
+    settings = get_settings()
     logger.info("Creating test engine fixture.")
-    assert (url := get_settings().test_database_url) is not None, (
+    assert (url := settings.test_database_url) is not None, (
         "No database url found for test"
     )
     engine = new_engine(
         url.get_secret_value(),
+        echo=settings.debug,
         pool_size=5,
         max_overflow=10,
         pool_pre_ping=True,

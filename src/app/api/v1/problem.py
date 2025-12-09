@@ -75,7 +75,7 @@ async def search(
     kw: str = Query(""),
     problemset_id: UUID | None = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1),
+    page_size: int = Query(20, ge=1, le=10000),
 ) -> list[ProblemResponse]:
     return await search_problem(
         session,

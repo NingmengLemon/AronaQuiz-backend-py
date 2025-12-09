@@ -4,10 +4,8 @@ from uuid import UUID
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.db.user import (
-    DBUser,
-    UserRole,
-)
+from app.models.db.user import DBUser, UserRole
+from app.utils.db import in_transaction
 from app.utils.security import hash
 
 
@@ -36,6 +34,7 @@ async def query_user(
     ).one_or_none()
 
 
+@in_transaction()
 async def create_user(
     session: AsyncSession,
     username: str,
@@ -55,5 +54,5 @@ async def create_user(
     session.add(user)
     await session.flush()
     await session.refresh(user)
-    await session.commit()
+    # await session.commit()
     return user.id

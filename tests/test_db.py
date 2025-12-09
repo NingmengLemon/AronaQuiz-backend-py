@@ -60,7 +60,7 @@ async def init_problemset_uuid(
             else:
                 # 创建新的问题集
                 id_, _ = await create_problemset(session, "test")
-        await session.commit()
+        # await session.commit()
     logger.info("Problem set UUID fixture initialized.")
     yield id_
 
@@ -94,7 +94,7 @@ async def test_add(
                 ],
             ),
         )
-        await session.commit()
+        # await session.commit()
 
     async with test_session_getter() as session:
         problems = (await session.exec(select(DBProblem))).all()
@@ -186,7 +186,7 @@ async def test_query_problem(
         )
         assert problem_ids is not None
         problem_id = problem_ids[0]
-        await session.commit()
+        # await session.commit()
 
     async with test_session_getter() as session:
         # 查询刚才添加的问题
@@ -240,7 +240,7 @@ async def test_search_problem(
                 ],
             ),
         )
-        await session.commit()
+        # await session.commit()
 
     async with test_session_getter() as session:
         # 搜索包含"Python"的问题
@@ -288,13 +288,13 @@ async def test_delete_problems(
             ),
         )
         assert problem_ids is not None
-        await session.commit()
+        # await session.commit()
         assert await get_problem_count(session) == 3
 
     async with test_session_getter() as session:
         # 删除第一个问题
         await delete_problems(session, problem_ids[0])
-        await session.commit()
+        # await session.commit()
         assert await get_problem_count(session) == 2
 
         # 验证第一个问题已被删除
@@ -309,7 +309,7 @@ async def test_delete_problems(
     async with test_session_getter() as session:
         # 删除所有问题
         await delete_all_problems(session)
-        await session.commit()
+        # await session.commit()
         assert await get_problem_count(session) == 0
 
 
@@ -333,7 +333,7 @@ async def test_sample_problems(
             )
 
         await add_problems(session, init_problemset_uuid, *problems)
-        await session.commit()
+        # await session.commit()
         assert await get_problem_count(session) == 50
 
     async with test_session_getter() as session:
@@ -375,7 +375,7 @@ async def test_multi_select_problem(
         )
         assert problem_ids is not None
         problem_id = problem_ids[0]
-        await session.commit()
+        # await session.commit()
 
     async with test_session_getter() as session:
         # 查询并验证多选题
@@ -407,7 +407,7 @@ async def test_search_edge_cases(
                 options=[OptionSubmit(is_correct=True, order=0, content="答案")],
             ),
         )
-        await session.commit()
+        # await session.commit()
 
     async with test_session_getter() as session:
         # 测试不存在的关键词
@@ -442,7 +442,7 @@ async def test_problem_count(
                 options=[OptionSubmit(is_correct=True, order=0, content="答案")],
             ),
         )
-        await session.commit()
+        # await session.commit()
         assert await get_problem_count(session) == 1
 
         # 再添加一个问题
@@ -455,12 +455,12 @@ async def test_problem_count(
                 options=[OptionSubmit(is_correct=True, order=0, content="答案")],
             ),
         )
-        await session.commit()
+        # await session.commit()
         assert await get_problem_count(session) == 2
 
         # 删除一个问题
         await delete_all_problems(session)
-        await session.commit()
+        # await session.commit()
         assert await get_problem_count(session) == 0
 
 
@@ -472,12 +472,12 @@ async def test_problemset(
         id_, status = await create_problemset(session, "test")
         assert id_ == init_problemset_uuid
         assert status == ProblemSetCreateStatus.ALREADY_EXISTS
-        await session.commit()
+        # await session.commit()
 
         id_, status = await create_problemset(session, "test2")
         assert id_ != init_problemset_uuid
         assert status == ProblemSetCreateStatus.SUCCESS
-        await session.commit()
+        # await session.commit()
 
         id__ = await delete_problemset(session, id_)
         assert id__ is not None
@@ -490,7 +490,7 @@ async def test_user_operations(test_session_getter: SessionGetterType) -> None:
     async with test_session_getter() as session:
         # 测试创建用户
         user1 = await _create_user_simple(session, "testuser1")
-        await session.commit()
+        # await session.commit()
         # 测试查询用户（按用户名）
         queried_user = await query_user(session, username="testuser1")
         assert queried_user is not None
@@ -516,7 +516,7 @@ async def test_answer_record_operations(
     async with test_session_getter() as session:
         # 创建用户和问题
         user = await _create_user_simple(session, "test_student")
-        await session.commit()
+        # await session.commit()
 
         problem_ids = await add_problems(
             session,
@@ -532,7 +532,7 @@ async def test_answer_record_operations(
         )
         assert problem_ids is not None
         problem_id = problem_ids[0]
-        await session.commit()
+        # await session.commit()
 
         # 测试报告答题尝试（正确）
         test_time = utcnow()
@@ -580,7 +580,7 @@ async def test_advanced_search_operations(
             added_problems.append(problem)
 
         await add_problems(session, init_problemset_uuid, *added_problems)
-        await session.commit()
+        # await session.commit()
 
         # 测试精确匹配搜索
         python_results = await search_problem(session, "Python")
@@ -647,7 +647,7 @@ async def test_concurrent_operations(
                     )
                 )
             await add_problems(session, init_problemset_uuid, *problems)
-            await session.commit()
+            # await session.commit()
 
     # 并发添加问题
     tasks = [add_problems_batch(i) for i in range(5)]
@@ -675,7 +675,7 @@ async def test_data_validation_and_constraints(
                     options=[OptionSubmit(is_correct=True, order=0, content="答案")],
                 ),
             )
-            await session.commit()
+            # await session.commit()
             # 如果没有抛出异常，验证是否正确处理空内容
             problems = await search_problem(session, "")
             assert len(problems) >= 0  # 允许空内容搜索
@@ -698,7 +698,7 @@ async def test_data_validation_and_constraints(
             ),
         )
         assert problem_ids is not None
-        await session.commit()
+        # await session.commit()
 
         # 验证选项顺序
         problem = await query_problem(session, problem_ids[0])
@@ -721,7 +721,7 @@ async def test_problemset_operations_extended(
         ps1_id, status1 = await create_problemset(session, "数学题库")
         ps2_id, status2 = await create_problemset(session, "英语题库")
         ps3_id, status3 = await create_problemset(session, "计算机题库")
-        await session.commit()
+        # await session.commit()
 
         assert status1 == ProblemSetCreateStatus.SUCCESS
         assert status2 == ProblemSetCreateStatus.SUCCESS
@@ -741,7 +741,7 @@ async def test_problemset_operations_extended(
                     )
                 )
             await add_problems(session, ps_id, *problems)
-        await session.commit()
+        # await session.commit()
 
         # 测试列出所有问题集
         all_problemsets = await list_problemset(session)
@@ -756,7 +756,7 @@ async def test_problemset_operations_extended(
         # 测试删除问题集及其所有问题
         deleted_id = await delete_problemset(session, ps1_id)
         assert deleted_id == ps1_id
-        await session.commit()
+        # await session.commit()
 
         # 验证问题集已删除
         remaining_problemsets = await list_problemset(session)
@@ -797,7 +797,7 @@ async def test_edge_cases_and_error_handling(
 
         # 测试从空问题集中抽样
         empty_ps_id, _ = await create_problemset(session, "空问题集")
-        await session.commit()
+        # await session.commit()
 
         sampled = await sample(session, empty_ps_id, 10)
         assert len(sampled) == 0
@@ -873,7 +873,7 @@ async def test_problem_types_and_options(
             ),
         )
 
-        await session.commit()
+        # await session.commit()
         assert single_choice_id is not None
         assert multi_choice_id is not None
         assert binary_choice_id is not None
@@ -939,7 +939,7 @@ async def test_performance_and_bulk_operations(
             )
 
         result = await add_problems(session, init_problemset_uuid, *bulk_problems)
-        await session.commit()
+        # await session.commit()
 
         print(f"添加100个问题耗时: {time.time() - start_time:.3f}秒")
 
@@ -967,7 +967,7 @@ async def test_performance_and_bulk_operations(
         # 测试批量删除
         start_time = time.time()
         await delete_problems(session, *result[:50])  # 删除前50个
-        await session.commit()
+        # await session.commit()
         delete_time = time.time() - start_time
 
         print(f"删除50个问题耗时: {delete_time:.3f}秒")
@@ -984,7 +984,7 @@ async def test_database_transactions_and_rollback(
     test_username = "Ayachi Nene"
     async with test_session_getter() as session:
         await _create_user_simple(session, test_username)
-        await session.commit()
+        # await session.commit()
 
     async with test_session_getter() as session:
         with pytest.raises(IntegrityError):
@@ -1044,7 +1044,7 @@ async def test_unicode_and_special_characters(
         ]
 
         result = await add_problems(session, init_problemset_uuid, *unicode_problems)
-        await session.commit()
+        # await session.commit()
         assert result is not None
         assert len(result) == 4
 
@@ -1091,7 +1091,7 @@ async def test_database_integrity_and_relationships(
             ),
         )
         assert problem_ids is not None
-        await session.commit()
+        # await session.commit()
 
         # 验证问题和选项的关系
         problem_db = (
@@ -1110,7 +1110,7 @@ async def test_database_integrity_and_relationships(
         # 测试级联删除：删除问题应该同时删除其选项
         option_ids = [opt.id for opt in options]
         await delete_problems(session, problem_ids[0])
-        await session.commit()
+        # await session.commit()
 
         # 验证选项也被删除了
         remaining_options = (
@@ -1149,7 +1149,7 @@ async def test_problem_sampling_variations(
             )
 
         await add_problems(session, init_problemset_uuid, *mixed_problems)
-        await session.commit()
+        # await session.commit()
 
         # 测试不同大小的抽样
         sample_sizes = [1, 5, 10, 15, 20, 25]
@@ -1197,7 +1197,7 @@ async def test_complex_query_scenarios(
         ]
 
         await add_problems(session, init_problemset_uuid, *complex_problems)
-        await session.commit()
+        # await session.commit()
 
         # 测试不同关键词的搜索
         test_cases = [
@@ -1266,7 +1266,7 @@ async def test_data_consistency_after_operations(
             ),
         )
         assert problem_ids is not None
-        await session.commit()
+        # await session.commit()
 
         # 验证添加后的计数
         after_add_count = await get_problem_count(session, init_problemset_uuid)
@@ -1274,7 +1274,7 @@ async def test_data_consistency_after_operations(
 
         # 删除部分问题
         await delete_problems(session, problem_ids[0], problem_ids[2])
-        await session.commit()
+        # await session.commit()
 
         # 验证删除后的计数
         after_delete_count = await get_problem_count(session, init_problemset_uuid)
