@@ -11,7 +11,7 @@ from app.models.db.session import (
     LoginSessionStatus,
 )
 from app.models.db.user import DBUser
-from app.utils.db import in_transaction
+from app.utils.db import in_readonly_transaction, in_transaction
 from app.utils.misc import utcnow
 from app.utils.security import sha256, verify
 
@@ -52,6 +52,7 @@ async def login(
     return new_session.access_token, refresh_token
 
 
+@in_readonly_transaction()
 async def query_login_session(
     session: AsyncSession,
     *,

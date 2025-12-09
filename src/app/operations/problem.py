@@ -17,7 +17,7 @@ from app.models.dto.response import (
     ProblemResponse,
     ProblemSetResponse,
 )
-from app.utils.db import in_transaction
+from app.utils.db import in_readonly_transaction, in_transaction
 
 
 @in_transaction()
@@ -64,6 +64,7 @@ async def add_problems(
     return added_ids
 
 
+@in_readonly_transaction()
 async def query_problem(
     session: AsyncSession, problem_id: UUID
 ) -> ProblemResponse | None:
@@ -79,6 +80,7 @@ async def query_problem(
     )
 
 
+@in_readonly_transaction()
 async def search_problem(
     session: AsyncSession,
     kw: str | None = None,
@@ -148,6 +150,7 @@ async def delete_problemset(session: AsyncSession, problemset_id: UUID) -> None 
     return problemset_id
 
 
+@in_readonly_transaction()
 async def get_problem_count(
     session: AsyncSession, problemset_id: UUID | None = None
 ) -> int:
@@ -158,6 +161,7 @@ async def get_problem_count(
     return (await session.exec(stmt)).one()
 
 
+@in_readonly_transaction()
 async def sample(
     session: AsyncSession, problemset_id: UUID, n: int = 20
 ) -> list[ProblemResponse]:
@@ -172,6 +176,7 @@ async def sample(
     ]
 
 
+@in_readonly_transaction()
 async def list_problemset(session: AsyncSession) -> list[ProblemSetResponse]:
     stmt = (
         select(

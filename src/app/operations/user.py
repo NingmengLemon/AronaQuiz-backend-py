@@ -5,7 +5,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.user import DBUser, UserRole
-from app.utils.db import in_transaction
+from app.utils.db import in_readonly_transaction, in_transaction
 from app.utils.security import hash
 
 
@@ -17,6 +17,7 @@ async def query_user(session: AsyncSession, *, username: str) -> DBUser | None: 
 async def query_user(session: AsyncSession, *, user_id: UUID) -> DBUser | None: ...
 
 
+@in_readonly_transaction()
 async def query_user(
     session: AsyncSession,
     *,

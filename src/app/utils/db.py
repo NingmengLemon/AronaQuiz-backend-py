@@ -42,8 +42,28 @@ def in_transaction() -> Callable[
         ) -> T:
             async with auto_begin(session):
                 rv = await func(session, *args, **kwargs)
-                # await transaction.commit()
                 return rv
+
+        return wrapped
+
+    return deco
+
+
+def in_readonly_transaction() -> Callable[
+    [DatabaseAsyncCallable[P, T]], DatabaseAsyncCallable[P, T]
+]:
+    """
+    只读事务装饰器, 用于查询操作。
+    实际上并不能防止意外修改, 但可以作为语义上的区分。
+    """
+
+    def deco(func: DatabaseAsyncCallable[P, T]) -> DatabaseAsyncCallable[P, T]:
+        @functools.wraps(func)
+        async def wrapped(
+            session: AsyncSession, *args: P.args, **kwargs: P.kwargs
+        ) -> T:
+            # 对于只读操作，不需要显式事务，使用现有会话即可
+            return await func(session, *args, **kwargs)
 
         return wrapped
 
