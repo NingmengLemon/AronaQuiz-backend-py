@@ -14,7 +14,7 @@ dependencies = [
     "limits>=5.5.0",
     "pydantic-settings>=2.11.0",
     "pyyaml>=6.0.3",
-    "sqlalchemy[aiosqlite,asyncio,postgresql-asyncpg]>=2.0.43",
+    "sqlalchemy[asyncio,postgresql-asyncpg]>=2.0.43",
     "sqlmodel>=0.0.24",
 ]
 classifiers = ["Private :: Do Not Upload"]

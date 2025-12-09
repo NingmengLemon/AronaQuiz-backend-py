@@ -34,7 +34,6 @@ from app.operations.problem import (
 from app.operations.user import create_user, query_user
 from app.typ import SessionGetterType
 
-DB_NAME = "test_dbopts"
 
 logger = logging.getLogger(__name__)
 
