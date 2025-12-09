@@ -92,14 +92,23 @@ async def search_problem(
     stmt = select(DBProblem)
     if problemset_id:
         stmt = stmt.where(DBProblem.problemset_id == problemset_id)
+    if problem_type:
+        stmt = stmt.where(DBProblem.type == problem_type)
     if kw:
-        stmt = stmt.filter(
-            or_(
-                col(DBProblem.content).icontains(kw),
-            )
-        ).distinct()
-    if problem_type == ProblemType.SELECTIVE:
-        pass  # TODO: add more filters for selective problems
+        if problem_type == ProblemType.SELECTIVE:
+            # selective 类型的选项文本搜索
+            stmt = stmt.filter(
+                or_(
+                    col(DBProblem.content).icontains(kw),
+                    cast(col(DBProblem.details), Text).icontains(kw),
+                )
+            ).distinct()
+        else:
+            stmt = stmt.filter(
+                or_(
+                    col(DBProblem.content).icontains(kw),
+                )
+            ).distinct()
     stmt = stmt.offset((page - 1) * page_size).limit(page_size)
     db_problems = await session.exec(stmt)
     return [

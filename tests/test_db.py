@@ -285,18 +285,26 @@ async def test_search_problem(
 
     async with test_session_getter() as session:
         # 搜索包含"Python"的问题
-        results = await search_problem(session, "Python")
+        results = await search_problem(
+            session, "Python", problem_type=ProblemType.SELECTIVE
+        )
         assert len(results) == 2
         assert any("Python是一种编程语言" in p.content for p in results)
         assert any("什么是Python" in p.content for p in results)
 
         # 搜索包含"编程语言"的问题
-        results = await search_problem(session, "编程语言")
+        results = await search_problem(
+            session, "编程语言", problem_type=ProblemType.SELECTIVE
+        )
         assert len(results) == 3  # 所有问题都包含"编程语言"
 
         # 测试分页
-        results_page1 = await search_problem(session, "编程语言", page=1, page_size=2)
-        results_page2 = await search_problem(session, "编程语言", page=2, page_size=2)
+        results_page1 = await search_problem(
+            session, "编程语言", problem_type=ProblemType.SELECTIVE, page=1, page_size=2
+        )
+        results_page2 = await search_problem(
+            session, "编程语言", problem_type=ProblemType.SELECTIVE, page=2, page_size=2
+        )
         assert len(results_page1) == 2
         assert len(results_page2) == 1
         assert results_page1 + results_page2 == results
@@ -1395,7 +1403,9 @@ async def test_complex_query_scenarios(
         ]
 
         for keyword, expected_count in test_cases:
-            results = await search_problem(session, keyword)
+            results = await search_problem(
+                session, keyword, problem_type=ProblemType.SELECTIVE
+            )
             assert len(results) == expected_count, (
                 f"搜索'{keyword}'应该返回{expected_count}个结果，实际返回{len(results)}个"
             )

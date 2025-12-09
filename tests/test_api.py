@@ -505,8 +505,7 @@ class TestProblemAPIs:
         for problem in result:
             assert "content" in problem
             assert "type" in problem
-            assert "options" in problem
-            assert len(problem["options"]) > 0
+            assert len(problem["details"]["options"]) > 0
 
     @pytest.mark.asyncio
     async def test_delete_problems(
