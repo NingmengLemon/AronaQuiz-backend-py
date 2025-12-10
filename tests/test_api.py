@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.models.db.user import UserRole
 from app.models.dto.code import BusinessCode
-from app.operations.user import create_user
+from app.services.user import create_user
 from app.typ import SessionGetterType
 
 logger = logging.getLogger(__name__)

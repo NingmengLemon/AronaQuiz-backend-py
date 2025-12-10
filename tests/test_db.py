@@ -20,22 +20,25 @@ from app.models.db.problem import (
 from app.models.db.user import DBUser
 from app.models.dto.request import ProblemSubmit, SelectiveProblemSubmit
 from app.models.dto.response import ProblemSetCreateStatus
-from app.operations.problem import (
+from app.repos.problem import ProblemRepository, ProblemSetRepository
+from app.services.problem import (
     add_problems,
     create_problemset,
     delete_all_problems,
     delete_problems,
     delete_problemset,
     get_problem_count,
-    list_problemset,
-    query_problem,
-    sample,
-    search_problem,
 )
-from app.operations.user import create_user, query_user
+from app.services.user import create_user, query_user
 from app.typ import SessionGetterType
 
 logger = logging.getLogger(__name__)
+problem_repo = ProblemRepository()
+problemset_repo = ProblemSetRepository()
+query_problem = problem_repo.get_by_id
+search_problem = problem_repo.search
+sample = problem_repo.sample_by_problemset
+list_problemset = problemset_repo.list_with_count
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -49,11 +52,9 @@ async def init_problemset_uuid(
         if status != ProblemSetCreateStatus.SUCCESS:
             # 如果已存在，获取已存在的问题集ID
             problemsets = await list_problemset(session)
-            test_problemset = next(
-                (ps for ps in problemsets if ps.name == "test"), None
-            )
+            test_problemset = next((ps for ps in problemsets if ps[1] == "test"), None)
             if test_problemset:
-                id_ = test_problemset.id
+                id_ = test_problemset[0]
             else:
                 # 创建新的问题集
                 id_, _ = await create_problemset(session, "test")
@@ -843,7 +844,7 @@ async def test_problemset_operations_extended(
         assert len(all_problemsets) >= 3
 
         # 验证问题集计数
-        problemset_counts = {ps.name: ps.count for ps in all_problemsets}
+        problemset_counts = {ps[1]: ps[2] for ps in all_problemsets}
         assert problemset_counts.get("数学题库") == 10
         assert problemset_counts.get("英语题库") == 5
         assert problemset_counts.get("计算机题库") == 15
@@ -855,7 +856,7 @@ async def test_problemset_operations_extended(
 
         # 验证问题集已删除
         remaining_problemsets = await list_problemset(session)
-        remaining_names = {ps.name for ps in remaining_problemsets}
+        remaining_names = {ps[1] for ps in remaining_problemsets}
         assert "数学题库" not in remaining_names
         assert "英语题库" in remaining_names
         assert "计算机题库" in remaining_names
