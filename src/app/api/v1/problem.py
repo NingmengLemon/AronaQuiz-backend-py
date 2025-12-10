@@ -12,14 +12,14 @@ from app.models.dto.request import (
 )
 from app.models.dto.response import ApiResponse, ProblemResponse, ProblemSetCreateResponse, ProblemSetResponse
 from app.models.dto.code import BusinessCode
-from app.operations.problem import (
-    add_problems,
+from app.services.problem import (
     create_problemset,
+    add_problems,
     delete_problems,
     get_problem_count,
-    list_problemset,
-    sample,
-    search_problem,
+    list_problemsets,
+    sample_problems,
+    search_problems,
 )
 
 router = APIRouter(tags=["problem"])
@@ -54,7 +54,7 @@ async def create_problem_set(
 @router.get("/list_set", summary="列出现有的题目集")
 async def list_set(session: DbSessionDep, _: LoginRequired) -> ApiResponse[list[ProblemSetResponse]]:
     """列出现有的题目集"""
-    problem_sets = await list_problemset(session)
+    problem_sets = await list_problemsets(session)
     return ApiResponse.ok(data=problem_sets)
 
 
@@ -96,7 +96,7 @@ async def search(
     page_size: int = Query(20, ge=1, le=10000),
 ) -> ApiResponse[list[ProblemResponse]]:
     """搜索题目"""
-    problems = await search_problem(
+    problems = await search_problems(
         session,
         kw.strip() or None,
         problemset_id=problemset_id,
@@ -119,7 +119,7 @@ async def get_problems(
     page_size: int = Query(20, ge=1),
 ) -> ApiResponse[list[ProblemResponse]]:
     """获取题目列表"""
-    problems = await search_problem(
+    problems = await search_problems(
         session,
         None,
         problemset_id=problemset_id,
@@ -164,5 +164,5 @@ async def random(
     n: int = Query(20),
 ) -> ApiResponse[list[ProblemResponse]]:
     """随机抽取题目"""
-    problems = await sample(session, problemset_id=problemset_id, n=n)
+    problems = await sample_problems(session, problemset_id=problemset_id, n=n)
     return ApiResponse.ok(data=problems)
