@@ -21,7 +21,8 @@ from app.models.dto.response import (
     UserCreateResponse,
     UserInfoResponse,
 )
-from app.operations.user import create_user
+from app.repos.user import UserRepository
+from app.services.user import user_service
 
 router = APIRouter(tags=["user"])
 USERNAME_REGEX = re.compile(r"^[A-Za-z0-9_\-]{3,16}$", re.U | re.I)
@@ -54,9 +55,19 @@ async def _check_userinfo_availability(
         case "nickname":
             if NICKNAME_REGEX.match(value) is None:
                 return "invalid"
-    if (
-        await db.exec(select(DBUser).where(USER_FIELD_MAP[field] == value))
-    ).one_or_none():
+
+    # 检查数据库中是否已存在
+    user_repo = UserRepository()
+    if field == "email":
+        user = await user_repo.get_by_email(db, value)
+    elif field == "username":
+        user = await user_repo.get_by_username(db, value)
+    elif field == "nickname":
+        user = await user_repo.get_by_field(db, "nickname", value)
+    else:
+        user = None
+
+    if user is not None:
         return "conflict"
     return "ok"
 
@@ -72,6 +83,7 @@ async def check_userinfo_availability(
 async def register(
     db: DbSessionDep, submit: UserRegisterSubmit = Body(), _: Any = SpeedLimReqDep
 ) -> UserCreateResponse:
+    """用户注册"""
     for field, value in zip(
         USER_FIELD_MAP.keys(), (submit.email, submit.username, submit.nickname)
     ):
@@ -82,7 +94,14 @@ async def register(
                 400, f"用户信息不可用: {field}: `{value}` ({field_status})"
             )
 
-    user = await create_user(db, **submit.model_dump(), role=UserRole.USER)
+    user = await user_service.create_user(
+        db,
+        username=submit.username,
+        email=submit.email,
+        password=submit.password,
+        nickname=submit.nickname,
+        role=UserRole.USER,
+    )
     return UserCreateResponse.model_validate(user, from_attributes=True)
 
 
@@ -90,9 +109,11 @@ async def register(
 async def get_myinfo(
     login_session: LoginRequired, db: DbSessionDep
 ) -> SelfInfoResponse:
-    user = (
-        await db.exec(select(DBUser).where(DBUser.id == login_session.user_id))
-    ).one()
+    """获取当前用户信息"""
+
+    user = await user_service.query_user(db, user_id=login_session.user_id)
+    if user is None:
+        raise HTTPException(404, "用户不存在")
     return SelfInfoResponse.model_validate(user, from_attributes=True)
 
 
@@ -100,7 +121,11 @@ async def get_myinfo(
 async def get_user_info(
     _: LoginRequired, db: DbSessionDep, user_id: UUID = Query()
 ) -> UserInfoResponse:
-    user = (await db.exec(select(DBUser).where(DBUser.id == user_id))).one()
+    """获取指定用户信息"""
+
+    user = await user_service.query_user(db, user_id=user_id)
+    if user is None:
+        raise HTTPException(404, "用户不存在")
     return UserInfoResponse.model_validate(user, from_attributes=True)
 
 

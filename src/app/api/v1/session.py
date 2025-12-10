@@ -3,15 +3,19 @@ from typing import Any
 from fastapi import APIRouter, Body, Header, HTTPException
 
 from app.api.deps import DbSessionDep, LoginRequired, SpeedLimReqDep
+from app.models.dto.code import BusinessCode
 from app.models.dto.request import (
     LoginByEmailSubmit,
     LoginByUserIdSubmit,
     LoginByUsernameSubmit,
     RefreshTokenSubmit,
 )
-from app.models.dto.response import ApiResponse, LoginSuccessResponse, RefreshTokenResponse
-from app.models.dto.code import BusinessCode
-from app.operations.session import login, logout, refresh_access_token
+from app.models.dto.response import (
+    ApiResponse,
+    LoginSuccessResponse,
+    RefreshTokenResponse,
+)
+from app.services.session import session_service
 
 router = APIRouter(tags=["session"])
 
@@ -26,10 +30,9 @@ async def do_login(
     """用户登录"""
     if authorization:
         return ApiResponse.error(
-            code=BusinessCode.ALREADY_LOGGED_IN,
-            message="需要先退出登录"
+            code=BusinessCode.ALREADY_LOGGED_IN, message="需要先退出登录"
         )
-    
+
     params: dict[str, Any] = {"password": submit.password}
     if isinstance(submit, LoginByEmailSubmit):
         params["email"] = submit.email
@@ -37,18 +40,19 @@ async def do_login(
         params["username"] = submit.username
     elif isinstance(submit, LoginByUserIdSubmit):
         params["user_id"] = submit.user_id
-    
-    result = await login(db, **params)
+
+    result = await session_service.login(db, **params)
     if result is None:
         return ApiResponse.error(
-            code=BusinessCode.LOGIN_FAILED,
-            message="用户名或密码错误"
+            code=BusinessCode.LOGIN_FAILED, message="用户名或密码错误"
         )
-    
+
     access_token, refresh_token = result
     return ApiResponse.ok(
-        data=LoginSuccessResponse(access_token=access_token, refresh_token=refresh_token),
-        message="登录成功"
+        data=LoginSuccessResponse(
+            access_token=access_token, refresh_token=refresh_token
+        ),
+        message="登录成功",
     )
 
 
@@ -57,13 +61,10 @@ async def exit_login(
     login_session: LoginRequired, db: DbSessionDep, _: Any = SpeedLimReqDep
 ) -> ApiResponse[str]:
     """用户登出"""
-    if await logout(db, login_session.access_token):
+    if await session_service.logout(db, login_session.access_token):
         return ApiResponse.ok(data="ok", message="登出成功")
-    
-    return ApiResponse.error(
-        code=BusinessCode.LOGOUT_FAILED,
-        message="登出失败"
-    )
+
+    return ApiResponse.error(code=BusinessCode.LOGOUT_FAILED, message="登出失败")
 
 
 @router.post("/refresh")
@@ -74,23 +75,21 @@ async def do_refresh_access_token(
     submit: RefreshTokenSubmit = Body(),
 ) -> ApiResponse[RefreshTokenResponse]:
     """刷新访问令牌"""
-    result = await refresh_access_token(
+    result = await session_service.refresh_access_token(
         db,
         login_session.access_token,
         submit.refresh_token,
     )
-    
+
     if result is None:
         return ApiResponse.error(
-            code=BusinessCode.TOKEN_REFRESH_FAILED,
-            message="凭据错误"
+            code=BusinessCode.TOKEN_REFRESH_FAILED, message="凭据错误"
         )
-    
+
     new_access_token, new_refresh_token = result
     return ApiResponse.ok(
         data=RefreshTokenResponse(
-            access_token=new_access_token,
-            refresh_token=new_refresh_token
+            access_token=new_access_token, refresh_token=new_refresh_token
         ),
-        message="令牌刷新成功"
+        message="令牌刷新成功",
     )
