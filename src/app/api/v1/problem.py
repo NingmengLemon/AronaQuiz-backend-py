@@ -19,11 +19,15 @@ from app.models.dto.response import (
 )
 from app.services.problem import problem_service
 
-router = APIRouter(tags=["problem"])
+router = APIRouter(tags=["problems"])
 logger = logging.getLogger("uvicorn.error")
 
 
-@router.post("/create_set", summary="创建新的题目集")
+@router.post(
+    "/problemsets",
+    summary="创建新的题目集",
+    status_code=201,
+)
 async def create_problem_set(
     session: DbSessionDep,
     problem_set: ProblemSetSubmit = Body(),
@@ -36,10 +40,13 @@ async def create_problem_set(
     )
 
     if status == "ALREADY_EXISTS":
-        return ApiResponse.error(
-            code=BusinessCode.PROBLEMSET_ALREADY_EXISTS,
-            message="题目集已存在",
-            data=ProblemSetCreateResponse(id=id_, status=status),
+        raise HTTPException(
+            status_code=409,
+            detail=ApiResponse.error(
+                code=BusinessCode.PROBLEMSET_ALREADY_EXISTS,
+                message="题目集已存在",
+                data=ProblemSetCreateResponse(id=id_, status=status),
+            ).model_dump()
         )
 
     return ApiResponse.ok(
@@ -47,8 +54,11 @@ async def create_problem_set(
     )
 
 
-@router.get("/list_set", summary="列出现有的题目集")
-async def list_set(
+@router.get(
+    "/problemsets",
+    summary="列出现有的题目集",
+)
+async def list_problem_sets(
     session: DbSessionDep, _: LoginRequired
 ) -> ApiResponse[list[ProblemSetResponse]]:
     """列出现有的题目集"""
@@ -56,8 +66,12 @@ async def list_set(
     return ApiResponse.ok(data=problem_sets)
 
 
-@router.post("/add", summary="添加题目")
-async def add(
+@router.post(
+    "/problems",
+    summary="添加题目",
+    status_code=201,
+)
+async def create_problems(
     session: DbSessionDep,
     problems: list[ProblemSubmit] = Body(),
     problemset_id: UUID = Body(),
@@ -70,30 +84,33 @@ async def add(
         *problems,
     )
     if result is None:
-        return ApiResponse.error(
-            code=BusinessCode.PROBLEMSET_NOT_FOUND,
-            message=f"题目集 {problemset_id} 不存在",
+        raise HTTPException(
+            status_code=404,
+            detail=ApiResponse.error(
+                code=BusinessCode.PROBLEMSET_NOT_FOUND,
+                message=f"题目集 {problemset_id} 不存在",
+            ).model_dump()
         )
     return ApiResponse.ok(data=result, message=f"成功添加 {len(result)} 道题目")
 
 
 @router.get(
-    "/search",
+    "/problems",
     summary="搜索题目",
-    description="""kw 可留空, 此时不进行关键词筛选""",
+    description="""支持关键词搜索、题目集筛选和分页""",
 )
-async def search(
+async def search_problems(
     session: DbSessionDep,
     _: LoginRequired,
-    kw: str = Query(""),
-    problemset_id: UUID | None = Query(None),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=10000),
+    keyword: str = Query("", description="搜索关键词，留空则不进行关键词筛选"),
+    problemset_id: UUID | None = Query(None, description="题目集ID，留空则搜索所有题目集"),
+    page: int = Query(1, ge=1, description="页码，从1开始"),
+    page_size: int = Query(20, ge=1, le=10000, description="每页数量"),
 ) -> ApiResponse[list[ProblemResponse]]:
     """搜索题目"""
     problems = await problem_service.search_problems(
         session,
-        kw.strip() or None,
+        keyword.strip() or None,
         problemset_id=problemset_id,
         page=max(page, 1),
         page_size=max(page_size, 1),
@@ -102,61 +119,46 @@ async def search(
 
 
 @router.get(
-    "/get",
-    summary="获取题目",
-    description="""等价于 kw 字段留空的 /problem/search 接口""",
+    "/problems/count",
+    summary="获取题目数量",
+    description="题目集ID留空时返回库中题目总数",
 )
-async def get_problems(
+async def get_problem_count(
     session: DbSessionDep,
     _: LoginRequired,
-    problemset_id: UUID | None = Query(None),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1),
-) -> ApiResponse[list[ProblemResponse]]:
-    """获取题目列表"""
-    problems = await problem_service.search_problems(
-        session,
-        None,
-        problemset_id=problemset_id,
-        page=max(page, 1),
-        page_size=max(page_size, 1),
-    )
-    return ApiResponse.ok(data=problems)
-
-
-@router.get(
-    "/count", summary="获取题目数量", description="习题集 ID 留空时返回库中题目总数"
-)
-async def get_count(
-    session: DbSessionDep,
-    _: LoginRequired,
-    problemset_id: UUID | None = Query(None),
+    problemset_id: UUID | None = Query(None, description="题目集ID"),
 ) -> ApiResponse[int]:
     """获取题目数量"""
     count = await problem_service.get_problem_count(session, problemset_id)
     return ApiResponse.ok(data=count)
 
 
-@router.post("/delete", summary="删除题目")
-async def delete(
-    session: DbSessionDep,
-    problems: list[UUID],
-    _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
-) -> ApiResponse[str]:
-    """删除题目"""
-    await problem_service.delete_problems(session, *problems)
-    return ApiResponse.ok(data="ok", message=f"成功删除 {len(problems)} 道题目")
-
-
-@router.get("/random", summary="随机抽取题目")
-async def random(
+@router.get(
+    "/problems/random",
+    summary="随机抽取题目",
+)
+async def get_random_problems(
     session: DbSessionDep,
     _: LoginRequired,
-    problemset_id: UUID = Query(),
-    n: int = Query(20),
+    problemset_id: UUID = Query(description="题目集ID"),
+    n: int = Query(20, ge=1, le=1000, description="抽取数量"),
 ) -> ApiResponse[list[ProblemResponse]]:
     """随机抽取题目"""
     problems = await problem_service.sample_problems(
         session, problemset_id=problemset_id, n=n
     )
     return ApiResponse.ok(data=problems)
+
+
+@router.delete(
+    "/problems",
+    summary="删除题目",
+    status_code=204,
+)
+async def delete_problems(
+    session: DbSessionDep,
+    problem_ids: list[UUID] = Body(),
+    _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
+) -> None:
+    """删除题目"""
+    await problem_service.delete_problems(session, *problem_ids)

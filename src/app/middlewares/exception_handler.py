@@ -75,24 +75,41 @@ def register_exception_handlers(app: FastAPI) -> None:
         """处理HTTP异常"""
         logger.error(f"HTTP异常: {exc.detail}, 状态码: {exc.status_code}, 路径: {request.url.path}")
         
-        # 映射HTTP状态码到业务码
-        status_code_map = {
-            400: BusinessCode.BAD_REQUEST,
-            401: BusinessCode.UNAUTHORIZED,
-            403: BusinessCode.FORBIDDEN,
-            404: BusinessCode.NOT_FOUND,
-            422: BusinessCode.VALIDATION_ERROR,
-            500: BusinessCode.INTERNAL_ERROR,
-        }
-        
-        code = status_code_map.get(exc.status_code, BusinessCode.INTERNAL_ERROR)
+        # 检查detail是否已经是ApiResponse格式（包含code）
+        if isinstance(exc.detail, dict) and "code" in exc.detail:
+            # 使用detail中指定的特定业务错误码
+            code_value = exc.detail.get("code")
+            if isinstance(code_value, int):
+                code = code_value
+            elif isinstance(code_value, BusinessCode):
+                code = code_value.value
+            else:
+                code = int(code_value) if code_value is not None else BusinessCode.INTERNAL_ERROR.value
+            
+            message = str(exc.detail.get("message", str(exc.detail)))
+            data = exc.detail.get("data")
+        else:
+            # 映射HTTP状态码到通用业务码
+            status_code_map = {
+                400: BusinessCode.BAD_REQUEST,
+                401: BusinessCode.UNAUTHORIZED,
+                403: BusinessCode.FORBIDDEN,
+                404: BusinessCode.NOT_FOUND,
+                422: BusinessCode.VALIDATION_ERROR,
+                500: BusinessCode.INTERNAL_ERROR,
+            }
+            code_obj = status_code_map.get(exc.status_code, BusinessCode.INTERNAL_ERROR)
+            code = code_obj.value
+            message = str(exc.detail)
+            data = None
         
         return JSONResponse(
             status_code=exc.status_code,
             content=ApiResponse.error(
                 code=code,
-                message=str(exc.detail)
-            ).model_dump()
+                message=message,
+                data=data
+            ).model_dump(mode='json')  # 使用mode='json'确保UUID等类型被正确序列化
         )
     
     @app.exception_handler(Exception)

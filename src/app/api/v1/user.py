@@ -19,20 +19,32 @@ from app.models.dto.response import (
 )
 from app.services.user import user_service
 
-router = APIRouter(tags=["user"])
+router = APIRouter(tags=["users"])
 
 
-@router.get("/check_field")
+@router.get(
+    "/users/check-availability",
+    summary="检查用户信息可用性",
+    description="检查用户名、邮箱或昵称是否可用",
+)
 async def check_userinfo_availability(
-    db: DbSessionDep, field: str = Query(), value: str = Query()
+    db: DbSessionDep,
+    field: str = Query(description="字段名"),
+    value: str = Query(description="要检查的值"),
 ) -> Literal["ok", "conflict", "invalid"]:
     """检查用户信息可用性"""
     return await user_service.check_userinfo_availability(db, field, value)
 
 
-@router.post("/register")
-async def register(
-    db: DbSessionDep, submit: UserRegisterSubmit = Body(), _: Any = SpeedLimReqDep
+@router.post(
+    "/users",
+    summary="用户注册",
+    status_code=201,
+)
+async def create_user(
+    db: DbSessionDep,
+    submit: UserRegisterSubmit = Body(),
+    _: Any = SpeedLimReqDep,
 ) -> UserCreateResponse:
     """用户注册"""
     # 检查所有字段的可用性
@@ -60,8 +72,11 @@ async def register(
     return UserCreateResponse.model_validate(user, from_attributes=True)
 
 
-@router.get("/me")
-async def get_myinfo(
+@router.get(
+    "/users/me",
+    summary="获取当前用户信息",
+)
+async def get_current_user(
     login_session: LoginRequired, db: DbSessionDep
 ) -> SelfInfoResponse:
     """获取当前用户信息"""
@@ -71,9 +86,14 @@ async def get_myinfo(
     return SelfInfoResponse.model_validate(user, from_attributes=True)
 
 
-@router.get("/info")
-async def get_user_info(
-    _: LoginRequired, db: DbSessionDep, user_id: UUID = Query()
+@router.get(
+    "/users/{user_id}",
+    summary="获取指定用户信息",
+)
+async def get_user_by_id(
+    _: LoginRequired,
+    db: DbSessionDep,
+    user_id: UUID,
 ) -> UserInfoResponse:
     """获取指定用户信息"""
     user = await user_service.query_user(db, user_id=user_id)
@@ -82,10 +102,15 @@ async def get_user_info(
     return UserInfoResponse.model_validate(user, from_attributes=True)
 
 
-@router.post("/delete")
+@router.delete(
+    "/users/{user_id}",
+    summary="删除用户",
+    status_code=204,
+)
 async def delete_user(
     db: DbSessionDep,
-    user_ids: list[UUID] = Body(),
+    user_id: UUID,
     _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
-) -> list[UUID]:
+) -> None:
+    """删除用户"""
     raise NotImplementedError

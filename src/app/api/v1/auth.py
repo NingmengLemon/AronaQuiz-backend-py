@@ -17,11 +17,15 @@ from app.models.dto.response import (
 )
 from app.services.session import session_service
 
-router = APIRouter(tags=["session"])
+router = APIRouter(tags=["auth"])
 
 
-@router.post("/login")
-async def do_login(
+@router.post(
+    "/login",
+    summary="用户登录",
+    description="支持通过用户名、邮箱或用户ID登录",
+)
+async def login(
     db: DbSessionDep,
     submit: LoginByUsernameSubmit | LoginByEmailSubmit | LoginByUserIdSubmit = Body(),
     authorization: str = Header(""),
@@ -56,8 +60,12 @@ async def do_login(
     )
 
 
-@router.post("/logout")
-async def exit_login(
+@router.post(
+    "/logout",
+    summary="用户登出",
+    description="用户主动登出，使当前访问令牌失效",
+)
+async def logout(
     login_session: LoginRequired, db: DbSessionDep, _: Any = SpeedLimReqDep
 ) -> ApiResponse[str]:
     """用户登出"""
@@ -67,8 +75,12 @@ async def exit_login(
     return ApiResponse.error(code=BusinessCode.LOGOUT_FAILED, message="登出失败")
 
 
-@router.post("/refresh")
-async def do_refresh_access_token(
+@router.post(
+    "/refresh",
+    summary="刷新访问令牌",
+    description="使用刷新令牌获取新的访问令牌",
+)
+async def refresh_token(
     login_session: LoginRequired,
     db: DbSessionDep,
     _: Any = SpeedLimReqDep,

@@ -73,7 +73,7 @@ async def cu_auth_headers(
 ) -> dict[str, str]:
     logger.info("Setting up common user auth headers fixture.")
     resp = await test_client.post(
-        "/api/v1/session/login",
+        "/api/v1/auth/login",
         json={"user_id": str(setup_test_data.cuid), "password": PASSWORD_FOR_TEST},
     )
     result = resp.json()
@@ -91,7 +91,7 @@ async def su_auth_headers(
 ) -> dict[str, str]:
     logger.info("Setting up superuser auth headers fixture.")
     resp = await test_client.post(
-        "/api/v1/session/login",
+        "/api/v1/auth/login",
         json={"user_id": str(setup_test_data.suid), "password": PASSWORD_FOR_TEST},
     )
     result = resp.json()
@@ -109,7 +109,7 @@ async def admin_auth_headers(
 ) -> dict[str, str]:
     logger.info("Setting up admin auth headers fixture.")
     resp = await test_client.post(
-        "/api/v1/session/login",
+        "/api/v1/auth/login",
         json={"user_id": str(setup_test_data.auid), "password": PASSWORD_FOR_TEST},
     )
     result = resp.json()
@@ -130,12 +130,12 @@ async def test_problemset(
     # 虽然有点不正式但是这里隐式包含了创建问题集的测试
     # 所以后面大概就不用写了 (x)
     resp = await test_client.post(
-        "/api/v1/problem/create_set",
+        "/api/v1/problemsets",
         headers=admin_auth_headers,
         json={"name": PROBLEMSET_NAME_FOR_TEST},
     )
     result = resp.json()
-    assert resp.status_code == 200, result
+    assert resp.status_code == 201, result
     assert result["success"] is True
     assert "data" in result
     logger.info("Test problem set fixture setup complete.")
@@ -151,7 +151,7 @@ class TestProblemAPIs:
         cu_auth_headers: dict[str, str],
     ) -> None:
         resp = await test_client.get(
-            "/api/v1/problem/list_set", headers=cu_auth_headers
+            "/api/v1/problemsets", headers=cu_auth_headers
         )
         result = resp.json()
         assert resp.status_code == 200, result
@@ -168,12 +168,12 @@ class TestProblemAPIs:
         admin_auth_headers: dict[str, str],
     ) -> None:
         resp = await test_client.post(
-            "/api/v1/problem/create_set",
+            "/api/v1/problemsets",
             headers=admin_auth_headers,
             json={"name": PROBLEMSET_NAME_FOR_TEST},
         )
         result = resp.json()
-        assert resp.status_code == 200, result
+        assert resp.status_code == 409, result
         assert result["success"] is False
         assert result["code"] == BusinessCode.PROBLEMSET_ALREADY_EXISTS
         assert UUID(result["data"]["id"]) == test_problemset
@@ -215,7 +215,7 @@ class TestProblemAPIs:
         ]
 
         resp = await test_client.post(
-            "/api/v1/problem/add",
+            "/api/v1/problems",
             headers=admin_auth_headers,
             json={
                 "problemset_id": str(test_problemset),
@@ -223,7 +223,7 @@ class TestProblemAPIs:
             },
         )
         result = resp.json()
-        assert resp.status_code == 200, result
+        assert resp.status_code == 201, result
         assert result["success"] is True
         assert "data" in result
         assert len(result["data"]) == 2
@@ -251,7 +251,7 @@ class TestProblemAPIs:
         ]
 
         resp = await test_client.post(
-            "/api/v1/problem/add",
+            "/api/v1/problems",
             headers=admin_auth_headers,
             json={
                 "problemset_id": fake_problemset_id,
@@ -259,7 +259,7 @@ class TestProblemAPIs:
             },
         )
         result = resp.json()
-        assert resp.status_code == 200, result
+        assert resp.status_code == 404, result
         assert result["success"] is False
         assert result["code"] == BusinessCode.PROBLEMSET_NOT_FOUND
 
@@ -299,7 +299,7 @@ class TestProblemAPIs:
         ]
 
         await test_client.post(
-            "/api/v1/problem/add",
+            "/api/v1/problems",
             headers=admin_auth_headers,
             json={
                 "problemset_id": str(test_problemset),
@@ -309,9 +309,9 @@ class TestProblemAPIs:
 
         # 测试搜索包含"Python"的题目
         resp = await test_client.get(
-            "/api/v1/problem/search",
+            "/api/v1/problems",
             headers=cu_auth_headers,
-            params={"kw": "Python"},
+            params={"keyword": "Python"},
         )
         result = resp.json()
         assert resp.status_code == 200, result
@@ -322,9 +322,9 @@ class TestProblemAPIs:
 
         # 测试搜索包含"编程语言"的题目
         resp = await test_client.get(
-            "/api/v1/problem/search",
+            "/api/v1/problems",
             headers=cu_auth_headers,
-            params={"kw": "编程语言"},
+            params={"keyword": "编程语言"},
         )
         result = resp.json()
         assert resp.status_code == 200, result
@@ -334,7 +334,7 @@ class TestProblemAPIs:
 
         # 测试按问题集搜索
         resp = await test_client.get(
-            "/api/v1/problem/search",
+            "/api/v1/problems",
             headers=cu_auth_headers,
             params={"problemset_id": str(test_problemset)},
         )
@@ -346,7 +346,7 @@ class TestProblemAPIs:
 
         # 测试分页搜索
         resp = await test_client.get(
-            "/api/v1/problem/search",
+            "/api/v1/problems",
             headers=cu_auth_headers,
             params={"page": 1, "page_size": 1},
         )
@@ -355,71 +355,6 @@ class TestProblemAPIs:
         assert result["success"] is True
         assert "data" in result
         assert len(result["data"]) == 1
-
-    @pytest.mark.asyncio
-    async def test_get_problems(
-        self,
-        test_client: AsyncClient,
-        test_problemset: UUID,
-        cu_auth_headers: dict[str, str],
-        admin_auth_headers: dict[str, str],
-    ) -> None:
-        """测试获取题目（无关键词搜索）"""
-        # 先添加测试题目
-        problem_data = [
-            {
-                "content": "测试题目1",
-                "type": "selective",
-                "details": {
-                    "type": "single",
-                    "options": [
-                        {"content": "答案1", "is_correct": True, "order": 0},
-                    ],
-                },
-            },
-            {
-                "content": "测试题目2",
-                "type": "selective",
-                "details": {
-                    "type": "single",
-                    "options": [
-                        {"content": "答案2", "is_correct": True, "order": 0},
-                    ],
-                },
-            },
-        ]
-
-        await test_client.post(
-            "/api/v1/problem/add",
-            headers=admin_auth_headers,
-            json={
-                "problemset_id": str(test_problemset),
-                "problems": problem_data,
-            },
-        )
-
-        # 测试获取所有题目
-        resp = await test_client.get(
-            "/api/v1/problem/get",
-            headers=cu_auth_headers,
-        )
-        result = resp.json()
-        assert resp.status_code == 200, result
-        assert result["success"] is True
-        assert "data" in result
-        assert len(result["data"]) >= 2
-
-        # 测试按问题集获取题目
-        resp = await test_client.get(
-            "/api/v1/problem/get",
-            headers=cu_auth_headers,
-            params={"problemset_id": str(test_problemset)},
-        )
-        result = resp.json()
-        assert resp.status_code == 200, result
-        assert result["success"] is True
-        assert "data" in result
-        assert len(result["data"]) == 2
 
     @pytest.mark.asyncio
     async def test_get_problem_count(
@@ -455,7 +390,7 @@ class TestProblemAPIs:
         ]
 
         await test_client.post(
-            "/api/v1/problem/add",
+            "/api/v1/problems",
             headers=admin_auth_headers,
             json={
                 "problemset_id": str(test_problemset),
@@ -465,7 +400,7 @@ class TestProblemAPIs:
 
         # 测试获取总题目数
         resp = await test_client.get(
-            "/api/v1/problem/count",
+            "/api/v1/problems/count",
             headers=cu_auth_headers,
         )
         result = resp.json()
@@ -476,7 +411,7 @@ class TestProblemAPIs:
 
         # 测试获取特定问题集的题目数
         resp = await test_client.get(
-            "/api/v1/problem/count",
+            "/api/v1/problems/count",
             headers=cu_auth_headers,
             params={"problemset_id": str(test_problemset)},
         )
@@ -512,7 +447,7 @@ class TestProblemAPIs:
             )
 
         await test_client.post(
-            "/api/v1/problem/add",
+            "/api/v1/problems",
             headers=admin_auth_headers,
             json={
                 "problemset_id": str(test_problemset),
@@ -522,7 +457,7 @@ class TestProblemAPIs:
 
         # 测试抽样5个题目
         resp = await test_client.get(
-            "/api/v1/problem/random",
+            "/api/v1/problems/random",
             headers=cu_auth_headers,
             params={
                 "problemset_id": str(test_problemset),
@@ -575,7 +510,7 @@ class TestProblemAPIs:
         ]
 
         resp = await test_client.post(
-            "/api/v1/problem/add",
+            "/api/v1/problems",
             headers=admin_auth_headers,
             json={
                 "problemset_id": str(test_problemset),
@@ -584,34 +519,32 @@ class TestProblemAPIs:
         )
         result = resp.json()
         problem_ids = result["data"]
-        assert resp.status_code == 200
+        assert resp.status_code == 201
         assert result["success"] is True
 
         # 验证题目存在
         resp = await test_client.get(
-            "/api/v1/problem/search",
+            "/api/v1/problems",
             headers=cu_auth_headers,
-            params={"kw": "待删除"},
+            params={"keyword": "待删除"},
         )
         result = resp.json()
         assert len(result["data"]) == 2
 
         # 删除第一个题目
-        resp = await test_client.post(
-            "/api/v1/problem/delete",
+        resp = await test_client.request(
+            "DELETE",
+            "/api/v1/problems",
             headers=admin_auth_headers,
-            json=[problem_ids[0]],
+            json=[str(problem_ids[0])],
         )
-        result = resp.json()
-        assert resp.status_code == 200
-        assert result["success"] is True
-        assert result["data"] == "ok"
+        assert resp.status_code == 204
 
         # 验证题目已被删除
         resp = await test_client.get(
-            "/api/v1/problem/search",
+            "/api/v1/problems",
             headers=cu_auth_headers,
-            params={"kw": "待删除"},
+            params={"keyword": "待删除"},
         )
         result = resp.json()
         assert len(result["data"]) == 1
@@ -636,7 +569,7 @@ class TestProblemAPIs:
         ]
 
         resp = await test_client.post(
-            "/api/v1/problem/add",
+            "/api/v1/problems",
             headers=cu_auth_headers,
             json={
                 "problemset_id": str(test_problemset),
@@ -653,8 +586,9 @@ class TestProblemAPIs:
     ) -> None:
         """测试普通用户无权限删除题目"""
         fake_problem_id = "12345678-1234-1234-1234-123456789012"
-        resp = await test_client.post(
-            "/api/v1/problem/delete",
+        resp = await test_client.request(
+            "DELETE",
+            "/api/v1/problems",
             headers=cu_auth_headers,
             json=[fake_problem_id],
         )
@@ -678,11 +612,11 @@ class TestUserAPIs:
         }
 
         resp = await test_client.post(
-            "/api/v1/user/register",
+            "/api/v1/users",
             json=user_data,
         )
         result = resp.json()
-        assert resp.status_code == 200, result
+        assert resp.status_code == 201, result
         assert "id" in result
         assert isinstance(UUID(result["id"]), UUID)
 
@@ -701,7 +635,7 @@ class TestUserAPIs:
         }
 
         resp = await test_client.post(
-            "/api/v1/user/register",
+            "/api/v1/users",
             json=user_data,
         )
         assert resp.status_code == 400
@@ -721,7 +655,7 @@ class TestUserAPIs:
         }
 
         resp = await test_client.post(
-            "/api/v1/user/register",
+            "/api/v1/users",
             json=user_data,
         )
         assert resp.status_code == 400
@@ -741,7 +675,7 @@ class TestUserAPIs:
         }
 
         resp = await test_client.post(
-            "/api/v1/user/register",
+            "/api/v1/users",
             json=user_data,
         )
         assert resp.status_code == 400
@@ -754,7 +688,7 @@ class TestUserAPIs:
         """测试检查字段可用性"""
         # 测试可用用户名
         resp = await test_client.get(
-            "/api/v1/user/check_field",
+            "/api/v1/users/check-availability",
             params={"field": "username", "value": "availablename"},
         )
         assert resp.status_code == 200
@@ -762,7 +696,7 @@ class TestUserAPIs:
 
         # 测试可用邮箱
         resp = await test_client.get(
-            "/api/v1/user/check_field",
+            "/api/v1/users/check-availability",
             params={"field": "email", "value": "available@example.com"},
         )
         assert resp.status_code == 200
@@ -770,7 +704,7 @@ class TestUserAPIs:
 
         # 测试可用昵称
         resp = await test_client.get(
-            "/api/v1/user/check_field",
+            "/api/v1/users/check-availability",
             params={"field": "nickname", "value": "可用昵称"},
         )
         assert resp.status_code == 200
@@ -785,7 +719,7 @@ class TestUserAPIs:
         """测试检查字段冲突"""
         # 测试冲突的用户名
         resp = await test_client.get(
-            "/api/v1/user/check_field",
+            "/api/v1/users/check-availability",
             params={"field": "username", "value": "commonuser"},
         )
         assert resp.status_code == 200
@@ -793,7 +727,7 @@ class TestUserAPIs:
 
         # 测试冲突的邮箱
         resp = await test_client.get(
-            "/api/v1/user/check_field",
+            "/api/v1/users/check-availability",
             params={"field": "email", "value": "common@example.com"},
         )
         assert resp.status_code == 200
@@ -801,7 +735,7 @@ class TestUserAPIs:
 
         # 测试冲突的昵称
         resp = await test_client.get(
-            "/api/v1/user/check_field",
+            "/api/v1/users/check-availability",
             params={"field": "nickname", "value": "普通用户"},
         )
         assert resp.status_code == 200
@@ -815,7 +749,7 @@ class TestUserAPIs:
         """测试检查无效字段"""
         # 测试无效邮箱格式
         resp = await test_client.get(
-            "/api/v1/user/check_field",
+            "/api/v1/users/check-availability",
             params={"field": "email", "value": "invalid-email"},
         )
         assert resp.status_code == 200
@@ -823,7 +757,7 @@ class TestUserAPIs:
 
         # 测试无效用户名格式
         resp = await test_client.get(
-            "/api/v1/user/check_field",
+            "/api/v1/users/check-availability",
             params={"field": "username", "value": "ab"},  # 太短
         )
         assert resp.status_code == 200
@@ -831,7 +765,7 @@ class TestUserAPIs:
 
         # 测试无效昵称格式
         resp = await test_client.get(
-            "/api/v1/user/check_field",
+            "/api/v1/users/check-availability",
             params={"field": "nickname", "value": "a"},  # 太短
         )
         assert resp.status_code == 200
@@ -845,7 +779,7 @@ class TestUserAPIs:
     ) -> None:
         """测试获取当前用户信息"""
         resp = await test_client.get(
-            "/api/v1/user/me",
+            "/api/v1/users/me",
             headers=cu_auth_headers,
         )
         result = resp.json()
@@ -866,9 +800,8 @@ class TestUserAPIs:
     ) -> None:
         """测试获取其他用户信息"""
         resp = await test_client.get(
-            "/api/v1/user/info",
+            f"/api/v1/users/{setup_test_data.auid}",  # 管理员用户
             headers=cu_auth_headers,
-            params={"user_id": str(setup_test_data.auid)},  # 管理员用户
         )
         result = resp.json()
         assert resp.status_code == 200, result
@@ -891,7 +824,7 @@ class TestSessionAPIs:
     ) -> None:
         """测试通过用户ID登录"""
         resp = await test_client.post(
-            "/api/v1/session/login",
+            "/api/v1/auth/login",
             json={
                 "user_id": str(setup_test_data.cuid),
                 "password": PASSWORD_FOR_TEST,
@@ -912,7 +845,7 @@ class TestSessionAPIs:
     ) -> None:
         """测试通过用户名登录"""
         resp = await test_client.post(
-            "/api/v1/session/login",
+            "/api/v1/auth/login",
             json={
                 "username": "commonuser",
                 "password": PASSWORD_FOR_TEST,
@@ -931,7 +864,7 @@ class TestSessionAPIs:
     ) -> None:
         """测试通过邮箱登录"""
         resp = await test_client.post(
-            "/api/v1/session/login",
+            "/api/v1/auth/login",
             json={
                 "email": "common@example.com",
                 "password": PASSWORD_FOR_TEST,
@@ -950,7 +883,7 @@ class TestSessionAPIs:
     ) -> None:
         """测试使用错误密码登录"""
         resp = await test_client.post(
-            "/api/v1/session/login",
+            "/api/v1/auth/login",
             json={
                 "user_id": str(setup_test_data.cuid),
                 "password": "wrongpassword",
@@ -968,7 +901,7 @@ class TestSessionAPIs:
     ) -> None:
         """测试使用不存在的用户登录"""
         resp = await test_client.post(
-            "/api/v1/session/login",
+            "/api/v1/auth/login",
             json={
                 "user_id": "12345678-1234-1234-1234-123456789012",
                 "password": "anypassword",
@@ -987,7 +920,7 @@ class TestSessionAPIs:
     ) -> None:
         """测试登出"""
         resp = await test_client.post(
-            "/api/v1/session/logout",
+            "/api/v1/auth/logout",
             headers=cu_auth_headers,
         )
         assert resp.status_code == 200
@@ -1002,7 +935,7 @@ class TestSessionAPIs:
         """测试刷新访问令牌"""
         # 先登录获取refresh_token
         login_resp = await test_client.post(
-            "/api/v1/session/login",
+            "/api/v1/auth/login",
             json={
                 "user_id": str(setup_test_data.cuid),
                 "password": PASSWORD_FOR_TEST,
@@ -1016,7 +949,7 @@ class TestSessionAPIs:
         # 使用refresh_token刷新
         headers = {"Authorization": f"Bearer {access_token}"}
         resp = await test_client.post(
-            "/api/v1/session/refresh",
+            "/api/v1/auth/refresh",
             headers=headers,
             json={"refresh_token": refresh_token},
         )
@@ -1034,7 +967,7 @@ class TestSessionAPIs:
         """测试使用无效的refresh_token"""
 
         resp = await test_client.post(
-            "/api/v1/session/refresh",
+            "/api/v1/auth/refresh",
             headers=cu_auth_headers,
             json={"refresh_token": str(uuid4())},
         )
@@ -1049,7 +982,7 @@ class TestSessionAPIs:
         test_client: AsyncClient,
     ) -> None:
         """测试未认证访问受保护端点"""
-        resp = await test_client.get("/api/v1/user/me")
+        resp = await test_client.get("/api/v1/users/me")
         assert resp.status_code == 401, resp.json()
 
     @pytest.mark.asyncio
@@ -1059,5 +992,5 @@ class TestSessionAPIs:
     ) -> None:
         """测试使用无效令牌访问受保护端点"""
         headers = {"Authorization": "Bearer invalid-token"}
-        resp = await test_client.get("/api/v1/user/me", headers=headers)
+        resp = await test_client.get("/api/v1/users/me", headers=headers)
         assert resp.status_code == 401, resp.json()
