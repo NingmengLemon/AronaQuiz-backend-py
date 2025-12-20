@@ -12,6 +12,3 @@ class StatService:
 
     def __init__(self) -> None:
         pass
-
-
-stat_service = StatService()

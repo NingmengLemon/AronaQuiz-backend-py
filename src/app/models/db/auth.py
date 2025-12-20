@@ -10,6 +10,7 @@ from app.utils.uuid7 import uuid7
 
 from .base import Base
 
+# TODO: make these configurable
 ACCESS_TOKEN_LIFETIME = 14  # days
 REFRESH_TOKEN_LIFETIME = 120  # days
 

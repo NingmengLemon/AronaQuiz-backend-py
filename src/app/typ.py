@@ -1,6 +1,7 @@
 from collections.abc import Awaitable, Callable
 from enum import Enum
 from typing import ParamSpec, Protocol, TypeVar, cast
+from uuid import UUID
 
 from sqlalchemy.orm import QueryableAttribute
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -23,3 +24,7 @@ SessionGetterType = Callable[[], AsyncSession]
 
 def queryable(o: T) -> QueryableAttribute[T]:
     return cast(QueryableAttribute, o)
+
+
+class ObjHasId(Protocol):
+    id: UUID

@@ -1,8 +1,8 @@
 from typing import Any
 
-from fastapi import APIRouter, Body, Header, HTTPException
+from fastapi import APIRouter, Body, Header
 
-from app.api.deps import DbSessionDep, LoginRequired, SpeedLimReqDep
+from app.api.deps import AuthServiceDep, DbSessionDep, LoginRequired, SpeedLimReqDep
 from app.models.dto.code import BusinessCode
 from app.models.dto.request import (
     LoginByEmailSubmit,
@@ -15,7 +15,6 @@ from app.models.dto.response import (
     LoginSuccessResponse,
     RefreshTokenResponse,
 )
-from app.services.session import session_service
 
 router = APIRouter(tags=["auth"])
 
@@ -26,7 +25,7 @@ router = APIRouter(tags=["auth"])
     description="支持通过用户名、邮箱或用户ID登录",
 )
 async def login(
-    db: DbSessionDep,
+    auth_service: AuthServiceDep,
     submit: LoginByUsernameSubmit | LoginByEmailSubmit | LoginByUserIdSubmit = Body(),
     authorization: str = Header(""),
     _: Any = SpeedLimReqDep,
@@ -45,7 +44,7 @@ async def login(
     elif isinstance(submit, LoginByUserIdSubmit):
         params["user_id"] = submit.user_id
 
-    result = await session_service.login(db, **params)
+    result = await auth_service.login(**params)
     if result is None:
         return ApiResponse.error(
             code=BusinessCode.LOGIN_FAILED, message="用户名或密码错误"
@@ -66,10 +65,12 @@ async def login(
     description="用户主动登出，使当前访问令牌失效",
 )
 async def logout(
-    login_session: LoginRequired, db: DbSessionDep, _: Any = SpeedLimReqDep
+    login_session: LoginRequired,
+    auth_service: AuthServiceDep,
+    _: Any = SpeedLimReqDep,
 ) -> ApiResponse[str]:
     """用户登出"""
-    if await session_service.logout(db, login_session.access_token):
+    if await auth_service.logout(access_token=login_session.access_token):
         return ApiResponse.ok(data="ok", message="登出成功")
 
     return ApiResponse.error(code=BusinessCode.LOGOUT_FAILED, message="登出失败")
@@ -82,15 +83,14 @@ async def logout(
 )
 async def refresh_token(
     login_session: LoginRequired,
-    db: DbSessionDep,
+    auth_service: AuthServiceDep,
     _: Any = SpeedLimReqDep,
     submit: RefreshTokenSubmit = Body(),
 ) -> ApiResponse[RefreshTokenResponse]:
     """刷新访问令牌"""
-    result = await session_service.refresh_access_token(
-        db,
-        login_session.access_token,
-        submit.refresh_token,
+    result = await auth_service.refresh_access_token(
+        access_token=login_session.access_token,
+        refresh_token=submit.refresh_token,
     )
 
     if result is None:

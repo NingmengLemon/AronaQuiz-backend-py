@@ -1,8 +1,8 @@
 """业务服务层"""
 
-from .problem import problem_service
-from .user import user_service
-from .session import session_service
-from .stat import stat_service
+from .auth import AuthService
+from .problem import ProblemService
+from .stat import StatService
+from .user import UserService
 
-__all__ = ["problem_service", "user_service", "session_service", "stat_service"]
+__all__ = ["ProblemService", "UserService", "AuthService", "StatService"]

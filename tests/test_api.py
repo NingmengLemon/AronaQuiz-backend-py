@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.models.db.user import UserRole
 from app.models.dto.code import BusinessCode
-from app.services.user import create_user
+from app.repos import UserRepository
+from app.services import UserService
 from app.typ import SessionGetterType
 
 logger = logging.getLogger(__name__)
@@ -32,26 +33,24 @@ async def setup_test_data(
 ) -> PreparedTestData:
     logger.info("Setting up test data fixture.")
     async with test_session_getter() as session:
+        user_service = UserService(session, UserRepository())
         # 创建测试用户
-        common_user = await create_user(
-            session,
-            "commonuser",
+        common_user = await user_service.create_user(
+            username="commonuser",
             email="common@example.com",
             nickname="普通用户",
             password=PASSWORD_FOR_TEST,
             role=UserRole.USER,
         )
-        admin = await create_user(
-            session,
-            "admin",
+        admin = await user_service.create_user(
+            username="admin",
             email="admin@example.com",
             nickname="权限狗",
             password=PASSWORD_FOR_TEST,
             role=UserRole.ADMIN,
         )
-        su = await create_user(
-            session,
-            "superuser",
+        su = await user_service.create_user(
+            username="superuser",
             email="su@example.com",
             nickname="卡瓦萝莉超管",
             password=PASSWORD_FOR_TEST,
@@ -150,9 +149,7 @@ class TestProblemAPIs:
         test_problemset: UUID,
         cu_auth_headers: dict[str, str],
     ) -> None:
-        resp = await test_client.get(
-            "/api/v1/problemsets", headers=cu_auth_headers
-        )
+        resp = await test_client.get("/api/v1/problemsets", headers=cu_auth_headers)
         result = resp.json()
         assert resp.status_code == 200, result
         assert result["success"] is True

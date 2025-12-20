@@ -1,4 +1,3 @@
-import re
 from typing import Any, Literal
 from uuid import UUID
 
@@ -9,6 +8,7 @@ from app.api.deps import (
     LoginRequired,
     RequireRoles,
     SpeedLimReqDep,
+    UserServiceDep,
 )
 from app.models.db.user import UserRole
 from app.models.dto.request import UserRegisterSubmit
@@ -17,7 +17,6 @@ from app.models.dto.response import (
     UserCreateResponse,
     UserInfoResponse,
 )
-from app.services.user import user_service
 
 router = APIRouter(tags=["users"])
 
@@ -28,12 +27,12 @@ router = APIRouter(tags=["users"])
     description="检查用户名、邮箱或昵称是否可用",
 )
 async def check_userinfo_availability(
-    db: DbSessionDep,
+    user_service: UserServiceDep,
     field: str = Query(description="字段名"),
     value: str = Query(description="要检查的值"),
 ) -> Literal["ok", "conflict", "invalid"]:
     """检查用户信息可用性"""
-    return await user_service.check_userinfo_availability(db, field, value)
+    return await user_service.check_userinfo_availability(field, value)
 
 
 @router.post(
@@ -42,14 +41,13 @@ async def check_userinfo_availability(
     status_code=201,
 )
 async def create_user(
-    db: DbSessionDep,
+    user_service: UserServiceDep,
     submit: UserRegisterSubmit = Body(),
     _: Any = SpeedLimReqDep,
 ) -> UserCreateResponse:
     """用户注册"""
     # 检查所有字段的可用性
     availability = await user_service.check_multiple_userinfo_availability(
-        db,
         username=submit.username,
         email=submit.email,
         nickname=submit.nickname,
@@ -62,7 +60,6 @@ async def create_user(
             raise HTTPException(400, f"用户信息不可用: {field}: `{value}` ({status})")
 
     user = await user_service.create_user(
-        db,
         username=submit.username,
         email=submit.email,
         password=submit.password,
@@ -77,10 +74,11 @@ async def create_user(
     summary="获取当前用户信息",
 )
 async def get_current_user(
-    login_session: LoginRequired, db: DbSessionDep
+    login_session: LoginRequired,
+    user_service: UserServiceDep,
 ) -> SelfInfoResponse:
     """获取当前用户信息"""
-    user = await user_service.query_user(db, user_id=login_session.user_id)
+    user = await user_service.query_user(user_id=login_session.user_id)
     if user is None:
         raise HTTPException(404, "用户不存在")
     return SelfInfoResponse.model_validate(user, from_attributes=True)
@@ -92,11 +90,11 @@ async def get_current_user(
 )
 async def get_user_by_id(
     _: LoginRequired,
-    db: DbSessionDep,
+    user_service: UserServiceDep,
     user_id: UUID,
 ) -> UserInfoResponse:
     """获取指定用户信息"""
-    user = await user_service.query_user(db, user_id=user_id)
+    user = await user_service.query_user(user_id=user_id)
     if user is None:
         raise HTTPException(404, "用户不存在")
     return UserInfoResponse.model_validate(user, from_attributes=True)
