@@ -614,8 +614,10 @@ class TestUserAPIs:
         )
         result = resp.json()
         assert resp.status_code == 201, result
-        assert "id" in result
-        assert isinstance(UUID(result["id"]), UUID)
+        assert result["success"] is True
+        assert "data" in result
+        assert "id" in result["data"]
+        assert isinstance(UUID(result["data"]["id"]), UUID)
 
     @pytest.mark.asyncio
     async def test_user_register_duplicate_username(
@@ -635,7 +637,10 @@ class TestUserAPIs:
             "/api/v1/users",
             json=user_data,
         )
-        assert resp.status_code == 400
+        result = resp.json()
+        assert resp.status_code == 409, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.USERNAME_ALREADY_EXISTS
 
     @pytest.mark.asyncio
     async def test_user_register_duplicate_email(
@@ -655,7 +660,10 @@ class TestUserAPIs:
             "/api/v1/users",
             json=user_data,
         )
-        assert resp.status_code == 400
+        result = resp.json()
+        assert resp.status_code == 409, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.EMAIL_ALREADY_EXISTS
 
     @pytest.mark.asyncio
     async def test_user_register_duplicate_nickname(
@@ -675,7 +683,10 @@ class TestUserAPIs:
             "/api/v1/users",
             json=user_data,
         )
-        assert resp.status_code == 400
+        result = resp.json()
+        assert resp.status_code == 409, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.NICKNAME_ALREADY_EXISTS
 
     @pytest.mark.asyncio
     async def test_check_field_availability(
@@ -781,12 +792,14 @@ class TestUserAPIs:
         )
         result = resp.json()
         assert resp.status_code == 200, result
-        assert "username" in result
-        assert "email" in result
-        assert "nickname" in result
-        assert result["username"] == "commonuser"
-        assert result["email"] == "common@example.com"
-        assert result["nickname"] == "普通用户"
+        assert result["success"] is True
+        assert "data" in result
+        assert "username" in result["data"]
+        assert "email" in result["data"]
+        assert "nickname" in result["data"]
+        assert result["data"]["username"] == "commonuser"
+        assert result["data"]["email"] == "common@example.com"
+        assert result["data"]["nickname"] == "普通用户"
 
     @pytest.mark.asyncio
     async def test_get_user_info(
@@ -802,12 +815,14 @@ class TestUserAPIs:
         )
         result = resp.json()
         assert resp.status_code == 200, result
-        assert "username" in result
-        assert "email" in result
-        assert "nickname" in result
-        assert result["username"] == "admin"
-        assert result["email"] == "admin@example.com"
-        assert result["nickname"] == "权限狗"
+        assert result["success"] is True
+        assert "data" in result
+        assert "username" in result["data"]
+        assert "email" in result["data"]
+        assert "nickname" in result["data"]
+        assert result["data"]["username"] == "admin"
+        assert result["data"]["email"] == "admin@example.com"
+        assert result["data"]["nickname"] == "权限狗"
 
 
 class TestSessionAPIs:
@@ -887,7 +902,7 @@ class TestSessionAPIs:
             },
         )
         result = resp.json()
-        assert resp.status_code == 200, result
+        assert resp.status_code == 401, result
         assert result["success"] is False
         assert result["code"] == BusinessCode.LOGIN_FAILED
 
@@ -905,7 +920,7 @@ class TestSessionAPIs:
             },
         )
         result = resp.json()
-        assert resp.status_code == 200, result
+        assert resp.status_code == 401, result
         assert result["success"] is False
         assert result["code"] == BusinessCode.LOGIN_FAILED
 
@@ -969,7 +984,7 @@ class TestSessionAPIs:
             json={"refresh_token": str(uuid4())},
         )
         result = resp.json()
-        assert resp.status_code == 200, result
+        assert resp.status_code == 401, result
         assert result["success"] is False
         assert result["code"] == BusinessCode.TOKEN_REFRESH_FAILED
 

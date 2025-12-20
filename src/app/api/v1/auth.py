@@ -2,7 +2,8 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Header
 
-from app.api.deps import AuthServiceDep, DbSessionDep, LoginRequired, SpeedLimReqDep
+from app.api.deps import AuthServiceDep, LoginRequired, SpeedLimReqDep
+from app.exceptions import APIException
 from app.models.dto.code import BusinessCode
 from app.models.dto.request import (
     LoginByEmailSubmit,
@@ -15,6 +16,7 @@ from app.models.dto.response import (
     LoginSuccessResponse,
     RefreshTokenResponse,
 )
+from app.utils.response import ResponseUtil
 
 router = APIRouter(tags=["auth"])
 
@@ -32,9 +34,7 @@ async def login(
 ) -> ApiResponse[LoginSuccessResponse]:
     """用户登录"""
     if authorization:
-        return ApiResponse.error(
-            code=BusinessCode.ALREADY_LOGGED_IN, message="需要先退出登录"
-        )
+        return ResponseUtil.unauthorized(message="需要先退出登录")
 
     params: dict[str, Any] = {"password": submit.password}
     if isinstance(submit, LoginByEmailSubmit):
@@ -46,12 +46,12 @@ async def login(
 
     result = await auth_service.login(**params)
     if result is None:
-        return ApiResponse.error(
-            code=BusinessCode.LOGIN_FAILED, message="用户名或密码错误"
+        raise APIException(
+            status_code=401, code=BusinessCode.LOGIN_FAILED, message="用户名或密码错误"
         )
 
     access_token, refresh_token = result
-    return ApiResponse.ok(
+    return ResponseUtil.success(
         data=LoginSuccessResponse(
             access_token=access_token, refresh_token=refresh_token
         ),
@@ -71,9 +71,9 @@ async def logout(
 ) -> ApiResponse[str]:
     """用户登出"""
     if await auth_service.logout(access_token=login_session.access_token):
-        return ApiResponse.ok(data="ok", message="登出成功")
+        return ResponseUtil.success(data="ok", message="登出成功")
 
-    return ApiResponse.error(code=BusinessCode.LOGOUT_FAILED, message="登出失败")
+    return ResponseUtil.bad_request(message="登出失败")
 
 
 @router.post(
@@ -94,12 +94,14 @@ async def refresh_token(
     )
 
     if result is None:
-        return ApiResponse.error(
-            code=BusinessCode.TOKEN_REFRESH_FAILED, message="凭据错误"
+        raise APIException(
+            status_code=401,
+            code=BusinessCode.TOKEN_REFRESH_FAILED,
+            message="令牌刷新失败",
         )
 
     new_access_token, new_refresh_token = result
-    return ApiResponse.ok(
+    return ResponseUtil.success(
         data=RefreshTokenResponse(
             access_token=new_access_token, refresh_token=new_refresh_token
         ),

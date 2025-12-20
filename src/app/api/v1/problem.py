@@ -1,10 +1,10 @@
 import logging
-from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Query
 
-from app.api.deps import DbSessionDep, LoginRequired, ProblemServiceDep, RequireRoles
+from app.api.deps import LoginRequired, ProblemServiceDep, RequireRoles
+from app.exceptions import APIException
 from app.models.db.user import UserRole
 from app.models.dto.code import BusinessCode
 from app.models.dto.request import (
@@ -17,6 +17,7 @@ from app.models.dto.response import (
     ProblemSetCreateResponse,
     ProblemSetResponse,
 )
+from app.utils.response import ResponseUtil
 
 router = APIRouter(tags=["problems"])
 logger = logging.getLogger("uvicorn.error")
@@ -38,16 +39,15 @@ async def create_problem_set(
     )
 
     if status == "ALREADY_EXISTS":
-        raise HTTPException(
+        # 使用具体的业务状态码
+        raise APIException(
             status_code=409,
-            detail=ApiResponse.error(
-                code=BusinessCode.PROBLEMSET_ALREADY_EXISTS,
-                message="题目集已存在",
-                data=ProblemSetCreateResponse(id=id_, status=status),
-            ).model_dump(),
+            code=BusinessCode.PROBLEMSET_ALREADY_EXISTS,
+            message="题目集已存在",
+            data=ProblemSetCreateResponse(id=id_, status=status),
         )
 
-    return ApiResponse.ok(
+    return ResponseUtil.created(
         data=ProblemSetCreateResponse(id=id_, status=status), message="题目集创建成功"
     )
 
@@ -61,7 +61,7 @@ async def list_problem_sets(
 ) -> ApiResponse[list[ProblemSetResponse]]:
     """列出现有的题目集"""
     problem_sets = await problem_service.list_problemsets()
-    return ApiResponse.ok(data=problem_sets)
+    return ResponseUtil.success(data=problem_sets)
 
 
 @router.post(
@@ -81,14 +81,12 @@ async def create_problems(
         *problems,
     )
     if result is None:
-        raise HTTPException(
+        raise APIException(
             status_code=404,
-            detail=ApiResponse.error(
-                code=BusinessCode.PROBLEMSET_NOT_FOUND,
-                message=f"题目集 {problemset_id} 不存在",
-            ).model_dump(),
+            code=BusinessCode.PROBLEMSET_NOT_FOUND,
+            message=f"题目集 {problemset_id} 不存在",
         )
-    return ApiResponse.ok(data=result, message=f"成功添加 {len(result)} 道题目")
+    return ResponseUtil.created(data=result, message=f"成功添加 {len(result)} 道题目")
 
 
 @router.get(
@@ -113,7 +111,7 @@ async def search_problems(
         page=max(page, 1),
         page_size=max(page_size, 1),
     )
-    return ApiResponse.ok(data=problems)
+    return ResponseUtil.success(data=problems)
 
 
 @router.get(
@@ -128,7 +126,7 @@ async def get_problem_count(
 ) -> ApiResponse[int]:
     """获取题目数量"""
     count = await problem_service.get_problem_count(problemset_id)
-    return ApiResponse.ok(data=count)
+    return ResponseUtil.success(data=count)
 
 
 @router.get(
@@ -143,7 +141,7 @@ async def get_random_problems(
 ) -> ApiResponse[list[ProblemResponse]]:
     """随机抽取题目"""
     problems = await problem_service.sample_problems(problemset_id=problemset_id, n=n)
-    return ApiResponse.ok(data=problems)
+    return ResponseUtil.success(data=problems)
 
 
 @router.delete(

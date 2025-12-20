@@ -1,7 +1,7 @@
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Query
 
 from app.api.deps import (
     DbSessionDep,
@@ -10,13 +10,17 @@ from app.api.deps import (
     SpeedLimReqDep,
     UserServiceDep,
 )
+from app.exceptions import APIException, ValidationException
 from app.models.db.user import UserRole
+from app.models.dto.code import BusinessCode
 from app.models.dto.request import UserRegisterSubmit
 from app.models.dto.response import (
+    ApiResponse,
     SelfInfoResponse,
     UserCreateResponse,
     UserInfoResponse,
 )
+from app.utils.response import ResponseUtil
 
 router = APIRouter(tags=["users"])
 
@@ -44,7 +48,7 @@ async def create_user(
     user_service: UserServiceDep,
     submit: UserRegisterSubmit = Body(),
     _: Any = SpeedLimReqDep,
-) -> UserCreateResponse:
+) -> ApiResponse[UserCreateResponse]:
     """用户注册"""
     # 检查所有字段的可用性
     availability = await user_service.check_multiple_userinfo_availability(
@@ -57,7 +61,52 @@ async def create_user(
     for field, status in availability.items():
         if status != "ok":
             value = getattr(submit, field)
-            raise HTTPException(400, f"用户信息不可用: {field}: `{value}` ({status})")
+            from app.exceptions import APIException
+            from app.models.dto.code import BusinessCode
+
+            if status == "conflict":
+                if field == "username":
+                    raise APIException(
+                        status_code=409,
+                        code=BusinessCode.USERNAME_ALREADY_EXISTS,
+                        message=f"用户名已存在: {value}",
+                    )
+                elif field == "email":
+                    raise APIException(
+                        status_code=409,
+                        code=BusinessCode.EMAIL_ALREADY_EXISTS,
+                        message=f"邮箱已存在: {value}",
+                    )
+                elif field == "nickname":
+                    raise APIException(
+                        status_code=409,
+                        code=BusinessCode.NICKNAME_ALREADY_EXISTS,
+                        message=f"昵称已存在: {value}",
+                    )
+            elif status == "invalid":
+                if field == "username":
+                    raise APIException(
+                        status_code=400,
+                        code=BusinessCode.USERNAME_INVALID,
+                        message=f"用户名格式无效: {value}",
+                    )
+                elif field == "email":
+                    raise APIException(
+                        status_code=400,
+                        code=BusinessCode.EMAIL_INVALID,
+                        message=f"邮箱格式无效: {value}",
+                    )
+                elif field == "nickname":
+                    raise APIException(
+                        status_code=400,
+                        code=BusinessCode.NICKNAME_INVALID,
+                        message=f"昵称格式无效: {value}",
+                    )
+
+            # 默认回退
+            raise ValidationException(
+                message=f"用户信息不可用: {field}: `{value}` ({status})"
+            )
 
     user = await user_service.create_user(
         username=submit.username,
@@ -66,7 +115,10 @@ async def create_user(
         nickname=submit.nickname,
         role=UserRole.USER,
     )
-    return UserCreateResponse.model_validate(user, from_attributes=True)
+    return ResponseUtil.created(
+        data=UserCreateResponse.model_validate(user, from_attributes=True),
+        message="用户注册成功",
+    )
 
 
 @router.get(
@@ -76,12 +128,16 @@ async def create_user(
 async def get_current_user(
     login_session: LoginRequired,
     user_service: UserServiceDep,
-) -> SelfInfoResponse:
+) -> ApiResponse[SelfInfoResponse]:
     """获取当前用户信息"""
     user = await user_service.query_user(user_id=login_session.user_id)
     if user is None:
-        raise HTTPException(404, "用户不存在")
-    return SelfInfoResponse.model_validate(user, from_attributes=True)
+        raise APIException(
+            status_code=404, code=BusinessCode.USER_NOT_FOUND, message="用户不存在"
+        )
+    return ResponseUtil.success(
+        data=SelfInfoResponse.model_validate(user, from_attributes=True)
+    )
 
 
 @router.get(
@@ -92,12 +148,16 @@ async def get_user_by_id(
     _: LoginRequired,
     user_service: UserServiceDep,
     user_id: UUID,
-) -> UserInfoResponse:
+) -> ApiResponse[UserInfoResponse]:
     """获取指定用户信息"""
     user = await user_service.query_user(user_id=user_id)
     if user is None:
-        raise HTTPException(404, "用户不存在")
-    return UserInfoResponse.model_validate(user, from_attributes=True)
+        raise APIException(
+            status_code=404, code=BusinessCode.USER_NOT_FOUND, message="用户不存在"
+        )
+    return ResponseUtil.success(
+        data=UserInfoResponse.model_validate(user, from_attributes=True)
+    )
 
 
 @router.delete(
