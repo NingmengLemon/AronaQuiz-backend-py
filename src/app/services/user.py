@@ -10,7 +10,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.user import DBUser, UserRole
 from app.repos.user import UserRepository
-from app.utils.db import in_readonly_transaction, in_transaction
 from app.utils.security import hash
 
 USERNAME_REGEX = re.compile(r"^[A-Za-z0-9_\-]{3,16}$", re.U | re.I)

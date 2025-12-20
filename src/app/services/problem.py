@@ -1,16 +1,13 @@
 """题目业务逻辑服务层"""
 
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.problem import DBProblem, DBProblemSet, ProblemType
 from app.models.dto.request import ProblemSubmit
 from app.models.dto.response import ProblemResponse, ProblemSetResponse
 from app.repos.problem import ProblemRepository, ProblemSetRepository
-from app.utils.db import in_readonly_transaction, in_transaction
 
 
 class ProblemService:
