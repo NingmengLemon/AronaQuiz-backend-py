@@ -1,10 +1,11 @@
 from collections.abc import Awaitable, Callable
 from enum import Enum
-from typing import ParamSpec, Protocol, TypeVar, cast
+from typing import Generic, ParamSpec, Protocol, cast
 from uuid import UUID
 
 from sqlalchemy.orm import QueryableAttribute
 from sqlmodel.ext.asyncio.session import AsyncSession
+from typing_extensions import TypeVar
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -26,5 +27,8 @@ def queryable(o: T) -> QueryableAttribute[T]:
     return cast(QueryableAttribute, o)
 
 
-class ObjHasId(Protocol):
-    id: UUID
+IdTypeT = TypeVar("IdTypeT", default=UUID)
+
+
+class ObjHasId(Protocol, Generic[IdTypeT]):
+    id: IdTypeT

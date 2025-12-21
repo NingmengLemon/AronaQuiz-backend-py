@@ -944,7 +944,7 @@ class TestSessionAPIs:
         test_client: AsyncClient,
         setup_test_data: PreparedTestData,
     ) -> None:
-        """测试刷新访问令牌"""
+        """测试刷新访问令牌 - 验证令牌轮换"""
         # 先登录获取refresh_token
         login_resp = await test_client.post(
             "/api/v1/auth/login",
@@ -955,20 +955,34 @@ class TestSessionAPIs:
         )
         login_result = login_resp.json()
         assert login_resp.status_code == 200, login_result
-        refresh_token = login_result["data"]["refresh_token"]
-        access_token = login_result["data"]["access_token"]
+        old_refresh_token = login_result["data"]["refresh_token"]
+        old_access_token = login_result["data"]["access_token"]
 
         # 使用refresh_token刷新
-        headers = {"Authorization": f"Bearer {access_token}"}
+        headers = {"Authorization": f"Bearer {old_access_token}"}
         resp = await test_client.post(
             "/api/v1/auth/refresh",
             headers=headers,
-            json={"refresh_token": refresh_token},
+            json={"refresh_token": old_refresh_token},
         )
         result = resp.json()
         assert resp.status_code == 200, result
         assert "access_token" in result["data"]
         assert "refresh_token" in result["data"]
+        
+        # 验证令牌已轮换
+        new_access_token = result["data"]["access_token"]
+        new_refresh_token = result["data"]["refresh_token"]
+        assert new_access_token != old_access_token
+        assert new_refresh_token != old_refresh_token
+        
+        # 验证旧令牌已失效
+        resp = await test_client.post(
+            "/api/v1/auth/refresh",
+            headers={"Authorization": f"Bearer {new_access_token}"},
+            json={"refresh_token": old_refresh_token},
+        )
+        assert resp.status_code == 401
 
     @pytest.mark.asyncio
     async def test_refresh_token_with_invalid_token(

@@ -5,21 +5,17 @@ from typing import Any, Literal, Type, TypedDict
 from uuid import UUID
 
 from pydantic import (
-    BaseModel,
     TypeAdapter,
-    ValidationError,
     ValidationInfo,
     field_validator,
 )
-from pydantic import Field as PydField
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship
 
 from app.utils.misc import utcnow
-from app.utils.uuid7 import uuid7
 
-from .base import AsyncAttrs, Base
+from .base import AsyncAttrs, BaseHasId
 
 
 class ProblemType(StrEnum):
@@ -49,9 +45,8 @@ PROBLEM_DETAIL_TYPE_MAPPING: dict[ProblemType, type[ProblemDetails]] = {
 }
 
 
-class DBProblem(Base, AsyncAttrs[_ProblemAsyncAttrs], table=True):
+class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
     __tablename__ = "problem"
-    id: UUID = Field(default_factory=uuid7, primary_key=True)
     type: ProblemType
     content: str
     details: ProblemDetails = Field(sa_column=Column(JSONB, nullable=False))
@@ -92,9 +87,8 @@ class _ProblemSetAsyncAttrs:
     problems: Awaitable[list[DBProblem]]
 
 
-class DBProblemSet(Base, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
+class DBProblemSet(BaseHasId, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
     __tablename__ = "problemset"
-    id: UUID = Field(default_factory=uuid7, primary_key=True)
     name: str
     created_by: UUID | None = None
     description: str | None = None

@@ -23,6 +23,11 @@ class DatabaseConfig(BaseModel):
     query: dict[str, list[str] | str] = {}
 
 
+class AuthConfig(BaseModel):
+    access_token_lifetime_days: int = 14
+    refresh_token_lifetime_days: int = 120
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         toml_file=Path("arona_config.toml"),
@@ -36,6 +41,7 @@ class Settings(BaseSettings):
     debug: bool = False
     database: Secret[DatabaseConfig] = Secret(DatabaseConfig())
     test_database: Secret[DatabaseConfig | None] = Secret(None)
+    auth: AuthConfig = AuthConfig()
 
     @property
     def database_url(self) -> Secret[URL]:

@@ -6,17 +6,12 @@ from uuid import UUID, uuid4
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.db.auth import (
-    ACCESS_TOKEN_LIFETIME,
-    LoginSession,
-    LoginSessionStatus,
-)
-from app.models.db.user import DBUser
+from app.config import get_settings
+from app.models.db.auth import LoginSession, LoginSessionStatus
 from app.repos.auth import AuthRepository
 from app.repos.user import UserRepository
-from app.utils.db import in_readonly_transaction, in_transaction
 from app.utils.misc import utcnow
-from app.utils.security import sha256, verify
+from app.utils.security import hash, verify
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -62,7 +57,7 @@ class AuthService:
         refresh_token = uuid4()
         new_session = LoginSession(
             user_id=user.id,
-            refresh_token_hash=await sha256(refresh_token),
+            refresh_token_hash=await hash(str(refresh_token)),
         )
         created_session = await self.auth_repo.create(self.session, new_session)
         return created_session.access_token, refresh_token
@@ -99,6 +94,7 @@ class AuthService:
         if login_session.expires_at <= now:
             if login_session.status == LoginSessionStatus.ACTIVE:
                 login_session.status = LoginSessionStatus.EXPIRED
+                login_session.last_active = now
                 await self.auth_repo.update(self.session, login_session)
             return LoginSessionStatus.EXPIRED, None
 
@@ -113,27 +109,50 @@ class AuthService:
         self,
         access_token: UUID,
         refresh_token: UUID,
-    ) -> tuple[UUID, UUID | None] | None:
-        """刷新访问令牌"""
+        rotate: bool = True,
+    ) -> tuple[UUID, UUID] | None:
+        """刷新访问令牌 - 实现令牌轮换
+
+        传入当前的 access_token 和 refresh_token, 验证通过后返回新的令牌对.
+        验证包括检查 refresh_token 是否过期.
+        如果 rotate 为 True, 则生成新的 refresh_token 并轮换.
+        如果 rotate 为 False, 则保持 refresh_token 不变但仍返回原始 refresh_token."""
         login_session = await self.auth_repo.get_by_access_token(
             self.session, access_token
         )
         if login_session is None:
             return None
 
-        refresh_token_hash = await sha256(refresh_token)
-        if login_session.refresh_token_hash != refresh_token_hash:
+        if not await verify(login_session.refresh_token_hash, str(refresh_token)):
             return None
 
+        # 检查刷新令牌是否过期
+        now = utcnow()
+        if login_session.refresh_token_expires_at <= now:
+            return None
+
+        # 生成新的访问令牌
         new_access_token = uuid4()
         login_session.access_token = new_access_token
-        login_session.last_renewal = utcnow()
-        login_session.expires_at = login_session.last_renewal + timedelta(
-            days=ACCESS_TOKEN_LIFETIME
+        login_session.last_renewal = now
+        login_session.expires_at = now + timedelta(
+            days=get_settings().auth.access_token_lifetime_days
         )
 
+        # 处理刷新令牌轮换
+        if rotate:
+            # 轮换刷新令牌
+            new_refresh_token = uuid4()
+            login_session.refresh_token_hash = await hash(str(new_refresh_token))
+            login_session.refresh_token_expires_at = now + timedelta(
+                days=get_settings().auth.refresh_token_lifetime_days
+            )
+        else:
+            # 保持刷新令牌不变，但返回原始刷新令牌
+            new_refresh_token = refresh_token
+
         await self.auth_repo.update(self.session, login_session)
-        return new_access_token, None
+        return new_access_token, new_refresh_token
 
     async def logout(
         self,

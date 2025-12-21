@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 if get_settings().test_database_url is None:
     raise RuntimeError("No database url found for test")
 
+# 确保测试使用较短的令牌有效期
+settings = get_settings()
+settings.auth.access_token_lifetime_days = 1
+settings.auth.refresh_token_lifetime_days = 7
+
 
 @pytest_asyncio.fixture(scope="function", name="test_engine")
 async def test_engine() -> AsyncGenerator[AsyncEngine]:

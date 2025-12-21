@@ -5,14 +5,10 @@ from uuid import UUID, uuid4
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field
 
+from app.config import get_settings
 from app.utils.misc import utcnow
-from app.utils.uuid7 import uuid7
 
-from .base import Base
-
-# TODO: make these configurable
-ACCESS_TOKEN_LIFETIME = 14  # days
-REFRESH_TOKEN_LIFETIME = 120  # days
+from .base import BaseHasId
 
 
 class LoginSessionStatus(StrEnum):
@@ -23,15 +19,15 @@ class LoginSessionStatus(StrEnum):
     INVALID = auto()  # for other invalid conditions
 
 
-class LoginSession(Base, table=True):
+class LoginSession(BaseHasId, table=True):
     __tablename__ = "login_session"
-    id: UUID = Field(default_factory=uuid7, primary_key=True)
 
     access_token: UUID = Field(default_factory=uuid4)
     user_id: UUID = Field(foreign_key="user.id")
 
     expires_at: datetime = Field(
-        default_factory=lambda: utcnow() + timedelta(days=ACCESS_TOKEN_LIFETIME),
+        default_factory=lambda: utcnow()
+        + timedelta(days=get_settings().auth.access_token_lifetime_days),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     created_at: datetime = Field(
@@ -51,8 +47,9 @@ class LoginSession(Base, table=True):
     device_info: str = ""
     refresh_token_hash: str
     refresh_token_expires_at: datetime = Field(
-        default_factory=lambda: utcnow() + timedelta(days=REFRESH_TOKEN_LIFETIME),
+        default_factory=lambda: utcnow()
+        + timedelta(days=get_settings().auth.refresh_token_lifetime_days),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    # refresh token rotate 时, 创建一个新的 session, 将当前 session 设为 expired
+    # refresh token rotate 时, 更新当前 session 的 refresh_token_hash 和 refresh_token_expires_at
     # 定期移除过旧的过期的 session

@@ -1,11 +1,9 @@
 from enum import StrEnum, auto
-from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel import Field
-from app.utils.uuid7 import uuid7
 
-from .base import Base
+from .base import BaseHasId
 
 
 class UserRole(StrEnum):
@@ -14,10 +12,9 @@ class UserRole(StrEnum):
     SU = auto()  # permission level: max
 
 
-class DBUser(Base, table=True):
+class DBUser(BaseHasId, table=True):
     __tablename__ = "user"
-    # 所有属性都无需二次 await 所以没写
-    id: UUID = Field(default_factory=uuid7, primary_key=True)
+    # 所有属性都无需二次 await 所以没写 AsyncAttrs
     email: EmailStr = Field(unique=True)
     username: str = Field(unique=True)
     password_hash: str
