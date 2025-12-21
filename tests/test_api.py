@@ -700,7 +700,7 @@ class TestUserAPIs:
             params={"field": "username", "value": "availablename"},
         )
         assert resp.status_code == 200
-        assert resp.json() == "ok"
+        assert resp.json()["data"] == "ok"
 
         # 测试可用邮箱
         resp = await test_client.get(
@@ -708,7 +708,7 @@ class TestUserAPIs:
             params={"field": "email", "value": "available@example.com"},
         )
         assert resp.status_code == 200
-        assert resp.json() == "ok"
+        assert resp.json()["data"] == "ok"
 
         # 测试可用昵称
         resp = await test_client.get(
@@ -716,7 +716,7 @@ class TestUserAPIs:
             params={"field": "nickname", "value": "可用昵称"},
         )
         assert resp.status_code == 200
-        assert resp.json() == "ok"
+        assert resp.json()["data"] == "ok"
 
     @pytest.mark.asyncio
     async def test_check_field_conflict(
@@ -731,7 +731,7 @@ class TestUserAPIs:
             params={"field": "username", "value": "commonuser"},
         )
         assert resp.status_code == 200
-        assert resp.json() == "conflict"
+        assert resp.json()["data"] == "conflict"
 
         # 测试冲突的邮箱
         resp = await test_client.get(
@@ -739,7 +739,7 @@ class TestUserAPIs:
             params={"field": "email", "value": "common@example.com"},
         )
         assert resp.status_code == 200
-        assert resp.json() == "conflict"
+        assert resp.json()["data"] == "conflict"
 
         # 测试冲突的昵称
         resp = await test_client.get(
@@ -747,7 +747,7 @@ class TestUserAPIs:
             params={"field": "nickname", "value": "普通用户"},
         )
         assert resp.status_code == 200
-        assert resp.json() == "conflict"
+        assert resp.json()["data"] == "conflict"
 
     @pytest.mark.asyncio
     async def test_check_field_invalid(
@@ -761,7 +761,7 @@ class TestUserAPIs:
             params={"field": "email", "value": "invalid-email"},
         )
         assert resp.status_code == 200
-        assert resp.json() == "invalid"
+        assert resp.json()["data"] == "invalid"
 
         # 测试无效用户名格式
         resp = await test_client.get(
@@ -769,7 +769,7 @@ class TestUserAPIs:
             params={"field": "username", "value": "ab"},  # 太短
         )
         assert resp.status_code == 200
-        assert resp.json() == "invalid"
+        assert resp.json()["data"] == "invalid"
 
         # 测试无效昵称格式
         resp = await test_client.get(
@@ -777,7 +777,7 @@ class TestUserAPIs:
             params={"field": "nickname", "value": "a"},  # 太短
         )
         assert resp.status_code == 200
-        assert resp.json() == "invalid"
+        assert resp.json()["data"] == "invalid"
 
     @pytest.mark.asyncio
     async def test_get_my_info(
@@ -969,13 +969,13 @@ class TestSessionAPIs:
         assert resp.status_code == 200, result
         assert "access_token" in result["data"]
         assert "refresh_token" in result["data"]
-        
+
         # 验证令牌已轮换
         new_access_token = result["data"]["access_token"]
         new_refresh_token = result["data"]["refresh_token"]
         assert new_access_token != old_access_token
         assert new_refresh_token != old_refresh_token
-        
+
         # 验证旧令牌已失效
         resp = await test_client.post(
             "/api/v1/auth/refresh",

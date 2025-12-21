@@ -34,9 +34,10 @@ async def check_userinfo_availability(
     user_service: UserServiceDep,
     field: str = Query(description="字段名"),
     value: str = Query(description="要检查的值"),
-) -> Literal["ok", "conflict", "invalid"]:
+) -> ApiResponse[Literal["ok", "conflict", "invalid"]]:
     """检查用户信息可用性"""
-    return await user_service.check_userinfo_availability(field, value)
+    status = await user_service.check_userinfo_availability(field, value)
+    return ResponseUtil.success(data=status)
 
 
 @router.post(
@@ -163,12 +164,12 @@ async def get_user_by_id(
 @router.delete(
     "/users/{user_id}",
     summary="删除用户",
-    status_code=204,
+    status_code=200,
 )
 async def delete_user(
     db: DbSessionDep,
     user_id: UUID,
     _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
-) -> None:
+) -> ApiResponse[str]:
     """删除用户"""
     raise NotImplementedError

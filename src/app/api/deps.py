@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator, Callable
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from limits import RateLimitItem
 from limits import parse as parse_limit
@@ -11,6 +11,11 @@ from limits.aio.strategies import RateLimiter, SlidingWindowCounterRateLimiter
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.exceptions import (
+    APIException,
+    ForbiddenException,
+    UnauthorizedException,
+)
 from app.models.db.auth import (
     LoginSession,
     LoginSessionStatus,
@@ -19,6 +24,7 @@ from app.models.db.user import (
     DBUser,
     UserRole,
 )
+from app.models.dto.code import BusinessCode
 from app.repos.auth import AuthRepository
 from app.repos.problem import ProblemRepository, ProblemSetRepository
 from app.repos.user import UserRepository
@@ -56,7 +62,11 @@ async def _speedlimit_entrance(request: Request) -> Request:
     ):
         return request
     else:
-        raise HTTPException(429, "请慢一点...!")
+        raise APIException(
+            status_code=429,
+            code=BusinessCode.TOO_MANY_REQUESTS,
+            message="请慢一点...!"
+        )
 
 
 SpeedLimReqDep = Depends(_speedlimit_entrance)
@@ -86,20 +96,20 @@ async def _check_login(
     try:
         token = UUID(rawtoken)
     except Exception:
-        raise HTTPException(401, "凭据无效")
+        raise UnauthorizedException(message="凭据无效")
 
     session_status, login_session = await auth_service.validate_login_session(
         access_token=token
     )
     match session_status:
         case LoginSessionStatus.EXPIRED:
-            raise HTTPException(401, "凭据过期")
+            raise UnauthorizedException(message="凭据过期")
         case LoginSessionStatus.ACTIVE:
             pass
         case _:
-            raise HTTPException(401, "会话无效")
+            raise UnauthorizedException(message="会话无效")
     if login_session is None:
-        raise HTTPException(401, "会话无效")
+        raise UnauthorizedException(message="会话无效")
 
     return login_session
 
@@ -122,7 +132,7 @@ def RequireRoles(*roles: UserRole) -> Any:
                 .role
             )
         ) not in roles:
-            raise HTTPException(403, "权限不足")
+            raise ForbiddenException(message="权限不足")
         return role
 
     return Depends(check_role)

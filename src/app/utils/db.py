@@ -3,13 +3,13 @@ from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any, Concatenate, Protocol
 
-from fastapi import HTTPException
 from sqlalchemy import URL, Connection, Table, inspect
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.ext.asyncio.session import AsyncSessionTransaction
 from sqlalchemy.orm import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.exceptions import DatabaseException
 from app.typ import AsyncCallable, P, T, T_co
 
 
@@ -21,7 +21,7 @@ def catch_db_exceptions(
         try:
             return await func(session, *args, **kwargs)
         except Exception as e:
-            raise HTTPException(500) from e
+            raise DatabaseException(message="数据库操作失败") from e
 
     return wrapped
 
