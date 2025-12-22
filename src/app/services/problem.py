@@ -112,6 +112,30 @@ class ProblemService:
             for problemset_id, name, count in results
         ]
 
+    async def search_problemsets(
+        self,
+        keyword: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> list[ProblemSetResponse]:
+        """搜索题目集"""
+        results = await self.problem_set_repo.search(
+            self.session,
+            keyword=keyword,
+            page=page,
+            page_size=page_size,
+        )
+        return [
+            ProblemSetResponse(id=problemset_id, name=name, count=count)
+            for problemset_id, name, count in results
+        ]
+
+    async def get_problemset_count(self, keyword: str | None = None) -> int:
+        """获取题目集数量"""
+        return await self.problem_set_repo.count_by_keyword(
+            self.session, keyword=keyword
+        )
+
     async def delete_problems(
         self,
         *problem_ids: UUID,

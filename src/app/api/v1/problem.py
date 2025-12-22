@@ -54,14 +54,38 @@ async def create_problem_set(
 
 @router.get(
     "/problemsets",
-    summary="列出现有的题目集",
+    summary="搜索题目集",
+    description="""支持关键词搜索和分页""",
 )
-async def list_problem_sets(
-    problem_service: ProblemServiceDep, _: LoginRequired
+async def search_problem_sets(
+    problem_service: ProblemServiceDep,
+    _: LoginRequired,
+    keyword: str = Query("", description="搜索关键词，留空则不进行关键词筛选"),
+    page: int = Query(1, ge=1, description="页码，从1开始"),
+    page_size: int = Query(20, ge=1, le=10000, description="每页数量"),
 ) -> ApiResponse[list[ProblemSetResponse]]:
-    """列出现有的题目集"""
-    problem_sets = await problem_service.list_problemsets()
+    """搜索题目集"""
+    problem_sets = await problem_service.search_problemsets(
+        keyword.strip() or None,
+        page=max(page, 1),
+        page_size=max(page_size, 1),
+    )
     return ResponseUtil.success(data=problem_sets)
+
+
+@router.get(
+    "/problemsets/count",
+    summary="获取题目集数量",
+    description="支持关键词搜索的题目集数量统计",
+)
+async def get_problemset_count(
+    problem_service: ProblemServiceDep,
+    _: LoginRequired,
+    keyword: str = Query("", description="搜索关键词，留空则统计所有题目集"),
+) -> ApiResponse[int]:
+    """获取题目集数量"""
+    count = await problem_service.get_problemset_count(keyword.strip() or None)
+    return ResponseUtil.success(data=count)
 
 
 @router.post(

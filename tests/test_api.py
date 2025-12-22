@@ -143,19 +143,124 @@ async def test_problemset(
 
 class TestProblemAPIs:
     @pytest.mark.asyncio
-    async def test_list_problemset(
+    async def test_search_problemsets(
         self,
         test_client: AsyncClient,
         test_problemset: UUID,
+        admin_auth_headers: dict[str, str],
         cu_auth_headers: dict[str, str],
     ) -> None:
-        resp = await test_client.get("/api/v1/problemsets", headers=cu_auth_headers)
+        """测试搜索题目集"""
+        # 先创建多个测试题目集
+        problemset_names = ["Python题库", "Java题库", "前端题库", "算法题库"]
+        for name in problemset_names:
+            resp = await test_client.post(
+                "/api/v1/problemsets",
+                headers=admin_auth_headers,
+                json={"name": name},
+            )
+            assert resp.status_code == 201
+
+        # 测试搜索包含"题库"的题目集
+        resp = await test_client.get(
+            "/api/v1/problemsets",
+            headers=cu_auth_headers,
+            params={"keyword": "题库"},
+        )
         result = resp.json()
         assert resp.status_code == 200, result
         assert result["success"] is True
         assert "data" in result
-        assert len(result["data"]) == 1
-        assert UUID(result["data"][0]["id"]) == test_problemset
+        assert len(result["data"]) >= 4  # 包含测试题目集
+
+        # 测试搜索包含"Python"的题目集
+        resp = await test_client.get(
+            "/api/v1/problemsets",
+            headers=cu_auth_headers,
+            params={"keyword": "Python"},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert len(result["data"]) >= 1
+        assert any("Python" in ps["name"] for ps in result["data"])
+
+        # 测试分页搜索
+        resp = await test_client.get(
+            "/api/v1/problemsets",
+            headers=cu_auth_headers,
+            params={"page": 1, "page_size": 2},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert len(result["data"]) == 2
+
+    @pytest.mark.asyncio
+    async def test_get_problemset_count(
+        self,
+        test_client: AsyncClient,
+        admin_auth_headers: dict[str, str],
+        cu_auth_headers: dict[str, str],
+    ) -> None:
+        """测试获取题目集数量"""
+        # 创建测试题目集
+        test_names = ["测试题库1", "测试题库2", "测试题库3"]
+        for name in test_names:
+            resp = await test_client.post(
+                "/api/v1/problemsets",
+                headers=admin_auth_headers,
+                json={"name": name},
+            )
+            assert resp.status_code == 201
+
+        # 测试获取总题目集数
+        resp = await test_client.get(
+            "/api/v1/problemsets/count",
+            headers=cu_auth_headers,
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is True
+        assert "data" in result
+        assert result["data"] >= 3
+
+        # 测试搜索特定关键词的题目集数量
+        resp = await test_client.get(
+            "/api/v1/problemsets/count",
+            headers=cu_auth_headers,
+            params={"keyword": "测试题库"},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["data"] >= 3
+
+        # 测试搜索不存在的关键词
+        resp = await test_client.get(
+            "/api/v1/problemsets/count",
+            headers=cu_auth_headers,
+            params={"keyword": "不存在的题库"},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["data"] == 0
+
+    @pytest.mark.asyncio
+    async def test_search_problemsets_empty_keyword(
+        self,
+        test_problemset: UUID,
+        test_client: AsyncClient,
+        cu_auth_headers: dict[str, str],
+    ) -> None:
+        """测试空关键词搜索题目集"""
+        resp = await test_client.get(
+            "/api/v1/problemsets",
+            headers=cu_auth_headers,
+            params={"keyword": ""},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is True
+        assert "data" in result
+        assert len(result["data"]) >= 1  # 至少包含测试题目集
 
     @pytest.mark.asyncio
     async def test_create_duplicated_problemset(

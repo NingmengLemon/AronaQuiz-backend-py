@@ -50,6 +50,56 @@ class ProblemSetRepository(BaseRepository[DBProblemSet]):
             (problemset_id, name, count or 0) for problemset_id, name, count in results
         ]
 
+    async def search(
+        self,
+        session: AsyncSession,
+        keyword: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> list[tuple[UUID, str, int]]:
+        """搜索题目集及其题目数量"""
+        stmt = (
+            select(
+                col(DBProblemSet.id),
+                col(DBProblemSet.name),
+                func.count(col(DBProblem.id)).label("problem_count"),
+            )
+            .select_from(DBProblemSet)
+            .outerjoin(DBProblem, col(DBProblem.problemset_id) == col(DBProblemSet.id))
+            .group_by(
+                col(DBProblemSet.id),
+                col(DBProblemSet.name),
+                col(DBProblemSet.created_at),
+            )
+        )
+
+        # 关键词搜索
+        if keyword and keyword.strip():
+            keyword = keyword.strip()
+            stmt = stmt.where(col(DBProblemSet.name).icontains(keyword))
+
+        # 分页
+        stmt = stmt.order_by(desc(col(DBProblemSet.created_at)))
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+
+        results = await session.exec(stmt)
+        return [
+            (problemset_id, name, count or 0) for problemset_id, name, count in results
+        ]
+
+    async def count_by_keyword(
+        self, session: AsyncSession, keyword: str | None = None
+    ) -> int:
+        """根据关键词统计题目集数量"""
+        stmt = select(func.count(col(DBProblemSet.id))).select_from(DBProblemSet)
+
+        if keyword and keyword.strip():
+            keyword = keyword.strip()
+            stmt = stmt.where(col(DBProblemSet.name).icontains(keyword))
+
+        result = await session.exec(stmt)
+        return result.one()
+
     async def delete_all(self, session: AsyncSession) -> None:
         """删除所有题目集"""
         stmt = delete(DBProblemSet)
