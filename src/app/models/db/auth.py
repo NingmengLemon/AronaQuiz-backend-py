@@ -2,10 +2,10 @@ from datetime import datetime, timedelta
 from enum import StrEnum, auto
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime
 from sqlmodel import Field
 
 from app.config import get_settings
+from app.utils.db import datetime_column_tzaware
 from app.utils.misc import utcnow
 
 from .base import BaseHasId
@@ -28,19 +28,19 @@ class LoginSession(BaseHasId, table=True):
     expires_at: datetime = Field(
         default_factory=lambda: utcnow()
         + timedelta(days=get_settings().auth.access_token_lifetime_days),
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_column=datetime_column_tzaware(),
     )
     created_at: datetime = Field(
         default_factory=utcnow,
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_column=datetime_column_tzaware(),
     )
     last_renewal: datetime = Field(
         default_factory=utcnow,
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_column=datetime_column_tzaware(),
     )
     last_active: datetime = Field(
         default_factory=utcnow,
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_column=datetime_column_tzaware(),
     )
     status: LoginSessionStatus = LoginSessionStatus.ACTIVE
 
@@ -49,7 +49,7 @@ class LoginSession(BaseHasId, table=True):
     refresh_token_expires_at: datetime = Field(
         default_factory=lambda: utcnow()
         + timedelta(days=get_settings().auth.refresh_token_lifetime_days),
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_column=datetime_column_tzaware(),
     )
     # refresh token rotate 时, 更新当前 session 的 refresh_token_hash 和 refresh_token_expires_at
     # 定期移除过旧的过期的 session

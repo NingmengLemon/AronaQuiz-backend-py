@@ -9,10 +9,11 @@ from pydantic import (
     ValidationInfo,
     field_validator,
 )
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Uuid
+from sqlalchemy import Column, ForeignKey, Index, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship
 
+from app.utils.db import datetime_column_tzaware
 from app.utils.misc import utcnow
 
 from .base import AsyncAttrs, BaseHasId
@@ -94,7 +95,7 @@ class DBProblemSet(BaseHasId, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
     description: str | None = None
     created_at: datetime = Field(
         default_factory=utcnow,
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_column=datetime_column_tzaware(),
     )
 
     problems: list[DBProblem] = Relationship(

@@ -1,9 +1,10 @@
 import functools
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any, Concatenate, Protocol
 
-from sqlalchemy import URL, Connection, Table, inspect
+from sqlalchemy import URL, Column, Connection, DateTime, Table, inspect
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.ext.asyncio.session import AsyncSessionTransaction
 from sqlalchemy.orm import Session
@@ -133,3 +134,7 @@ async def check_table_existence(session: AsyncSession, table: Table) -> bool:
     async_conn = await session.connection()
     existence = await async_conn.run_sync(check_table_existence_sync, table=table)
     return existence
+
+
+def datetime_column_tzaware() -> Column[datetime]:
+    return Column(DateTime(timezone=True), nullable=False)
