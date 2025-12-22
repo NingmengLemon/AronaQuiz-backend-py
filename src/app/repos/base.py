@@ -3,24 +3,18 @@
 from typing import Any, Generic, TypeVar
 from uuid import UUID
 
-from sqlmodel import SQLModel, func, select
+from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.typ import ObjHasId
+from app.models.db.base import BaseHasId
 
-ModelT = TypeVar("ModelT", bound=ObjHasId)
+ModelT = TypeVar("ModelT", bound=BaseHasId)
 
 
 class BaseRepository(Generic[ModelT]):
     """基础仓库类，提供通用的CRUD操作"""
 
     def __init__(self, model_class: type[ModelT]):
-        if not issubclass(model_class, SQLModel):
-            raise TypeError("model_class must be a subclass of SQLModel")
-        if not hasattr(model_class, "id"):
-            raise TypeError(
-                "model_class must have an 'id' attribute to be used in BaseRepository"
-            )
         self.model_class = model_class
 
     async def get_by_id(self, session: AsyncSession, id: UUID) -> ModelT | None:
