@@ -160,9 +160,9 @@ class ProblemService:
 
         return problemset_id
 
-    async def delete_all_problems(self, session: AsyncSession) -> None:
+    async def delete_all_problems(self) -> None:
         """删除所有题目和题目集"""
         # 删除所有题目
-        await self.problem_repo.delete_all(session)
+        await self.problem_repo.delete_all(self.session)
         # 删除所有题目集
-        await self.problem_set_repo.delete_all(session)
+        await self.problem_set_repo.delete_all(self.session)

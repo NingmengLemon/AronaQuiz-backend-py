@@ -387,7 +387,7 @@ async def test_delete_problems(
     async with test_session_getter() as session:
         problem_service = ProblemService(session, problemset_repo, problem_repo)
         # 删除所有问题
-        await problem_service.delete_all_problems(session)
+        await problem_service.delete_all_problems()
         await session.commit()
         assert await problem_service.get_problem_count() == 0
 
@@ -581,7 +581,7 @@ async def test_problem_count(
         assert await problem_service.get_problem_count() == 2
 
         # 删除一个问题
-        await problem_service.delete_all_problems(session)
+        await problem_service.delete_all_problems()
         await session.commit()
         assert await problem_service.get_problem_count() == 0
 
