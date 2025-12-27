@@ -28,6 +28,7 @@ from app.models.dto.code import BusinessCode
 from app.repos.auth import AuthRepository
 from app.repos.problem import ProblemRepository, ProblemSetRepository
 from app.repos.user import UserRepository
+from app.repos.tag import TagRepository
 from app.services.auth import AuthService
 from app.services.problem import ProblemService
 from app.services.user import UserService
@@ -142,10 +143,12 @@ def get_problem_service(session: DbSessionDep) -> ProblemService:
     """获取题目服务实例"""
     problemset_repo = ProblemSetRepository()
     problem_repo = ProblemRepository()
+    tag_repo = TagRepository()
     return ProblemService(
         session=session,
         problemset_repo=problemset_repo,
         problem_repo=problem_repo,
+        tag_repo=tag_repo,
     )
 
 

@@ -17,8 +17,10 @@ from app.utils.db import datetime_column_tzaware
 from app.utils.misc import utcnow
 
 from .base import AsyncAttrs, BaseHasId
+from .tag import ProblemSetTagLink, ProblemTagLink
 
 if TYPE_CHECKING:
+    from .tag import DBTag
     from .user import DBUser
 
 
@@ -42,6 +44,7 @@ type ProblemDetails = SelectiveProblemDetails  # | ...
 
 class _ProblemAsyncAttrs:
     problemset: Awaitable["DBProblemSet"]
+    tags: Awaitable[list["DBTag"]]
 
 
 PROBLEM_DETAIL_TYPE_MAPPING: dict[ProblemType, type[ProblemDetails]] = {
@@ -60,6 +63,9 @@ class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
         sa_column=Column(Uuid, ForeignKey("problemset.id", ondelete="CASCADE"))
     )
     problemset: "DBProblemSet" = Relationship(back_populates="problems")
+    tags: list["DBTag"] = Relationship(
+        back_populates="problems", link_model=ProblemTagLink
+    )
 
     __table_args__ = (
         Index("ix_problem_details_gin", "details", postgresql_using="gin"),
@@ -90,6 +96,7 @@ class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
 class _ProblemSetAsyncAttrs:
     problems: Awaitable[list[DBProblem]]
     owner: Awaitable["DBUser"]
+    tags: Awaitable[list["DBTag"]]
 
 
 class DBProblemSet(BaseHasId, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
@@ -97,9 +104,6 @@ class DBProblemSet(BaseHasId, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
     name: str
     description: str = Field(default="")
     is_public: bool = Field(default=False)
-    tags: list[str] = Field(
-        default_factory=list, sa_column=Column(JSONB, nullable=False)
-    )
     created_at: datetime = Field(
         default_factory=utcnow,
         sa_column=datetime_column_tzaware(),
@@ -115,6 +119,9 @@ class DBProblemSet(BaseHasId, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
     problems: list[DBProblem] = Relationship(
         back_populates="problemset",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+    tags: list["DBTag"] = Relationship(
+        back_populates="problemsets", link_model=ProblemSetTagLink
     )
 
     __table_args__ = (

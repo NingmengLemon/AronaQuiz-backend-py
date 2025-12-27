@@ -20,6 +20,7 @@ from app.models.db.problem import (
 from app.models.db.user import DBUser
 from app.models.dto.request import ProblemSubmit, SelectiveProblemSubmit
 from app.repos.problem import ProblemRepository, ProblemSetRepository
+from app.repos.tag import TagRepository
 from app.repos.user import UserRepository
 from app.services.problem import ProblemService
 from app.services.user import UserService
@@ -28,10 +29,7 @@ from app.typ import SessionGetterType
 logger = logging.getLogger(__name__)
 problem_repo = ProblemRepository()
 problemset_repo = ProblemSetRepository()
-query_problem = problem_repo.get_by_id
-search_problem = problem_repo.search
-sample = problem_repo.sample_by_problemset
-list_problemset = problemset_repo.list_with_count
+tag_repo = TagRepository()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -44,7 +42,9 @@ async def init_problemset_uuid(
         owner_id = await _create_user_simple(session, "test_owner")
         await session.commit()
 
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 创建测试问题集
         id_, status = await problem_service.create_problemset(
             owner_id=owner_id,
@@ -56,7 +56,7 @@ async def init_problemset_uuid(
         await session.commit()
         if status != "SUCCESS":
             # 如果已存在，获取已存在的问题集ID
-            problemsets = await list_problemset(session)
+            problemsets = await problemset_repo.list_with_count(session)
             test_problemset = next((ps for ps in problemsets if ps[1] == "test"), None)
             if test_problemset:
                 id_ = test_problemset[0]
@@ -93,7 +93,10 @@ async def test_add(
     async with test_session_getter() as session:
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         # 确保问题集存在
         problemset = await problemset_repo.get_by_id(session, init_problemset_uuid)
@@ -175,7 +178,9 @@ async def test_multiadd(
         owner_id = await _create_user_simple(session, "test_multiadd_owner")
         await session.commit()
 
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         for s in sheet_:
             i, _ = await problem_service.create_problemset(
                 owner_id=owner_id,
@@ -212,7 +217,9 @@ async def test_query_problem(
 ) -> None:
     """测试查询单个问题功能"""
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 先添加一个问题
         problem_ids = await problem_service.add_problems(
             init_problemset_uuid,
@@ -242,7 +249,7 @@ async def test_query_problem(
 
     async with test_session_getter() as session:
         # 查询刚才添加的问题
-        queried_problem = await query_problem(session, problem_id)
+        queried_problem = await problem_repo.get_by_id(session, problem_id)
         assert queried_problem is not None
         assert queried_problem.content == "测试查询问题"
         assert queried_problem.type == ProblemType.SELECTIVE
@@ -253,7 +260,7 @@ async def test_query_problem(
     async with test_session_getter() as session:
         # 测试查询不存在的问题
         non_existent_id = uuid4()
-        non_existent_problem = await query_problem(session, non_existent_id)
+        non_existent_problem = await problem_repo.get_by_id(session, non_existent_id)
         assert non_existent_problem is None
 
 
@@ -263,7 +270,9 @@ async def test_search_problem(
 ) -> None:
     """测试搜索问题功能"""
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 添加几个测试问题
         await problem_service.add_problems(
             init_problemset_uuid,
@@ -316,7 +325,9 @@ async def test_search_problem(
         await session.commit()
 
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 搜索包含"Python"的问题
         results = await problem_service.search_problems(
             kw="Python", problem_type=ProblemType.SELECTIVE
@@ -349,7 +360,9 @@ async def test_delete_problems(
 ) -> None:
     """测试删除问题功能"""
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 添加几个问题
         problem_ids = await problem_service.add_problems(
             init_problemset_uuid,
@@ -395,23 +408,27 @@ async def test_delete_problems(
         assert await problem_service.get_problem_count() == 3
 
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 删除第一个问题
         await problem_service.delete_problems(problem_ids[0])
         await session.commit()
         assert await problem_service.get_problem_count() == 2
 
         # 验证第一个问题已被删除
-        deleted_problem = await query_problem(session, problem_ids[0])
+        deleted_problem = await problem_repo.get_by_id(session, problem_ids[0])
         assert deleted_problem is None
 
         # 验证其他问题仍然存在
-        remaining_problem = await query_problem(session, problem_ids[1])
+        remaining_problem = await problem_repo.get_by_id(session, problem_ids[1])
         assert remaining_problem is not None
         assert remaining_problem.content == "问题2"
 
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 删除所有问题
         await problem_service.delete_all_problems()
         await session.commit()
@@ -424,7 +441,9 @@ async def test_sample_problems(
 ) -> None:
     """测试随机抽样功能"""
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 添加多个问题
         problems = []
         for i in range(50):
@@ -448,7 +467,9 @@ async def test_sample_problems(
         assert await problem_service.get_problem_count() == 50
 
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 抽样10个问题
         sampled_problems = await problem_service.sample_problems(
             init_problemset_uuid, 10
@@ -474,7 +495,10 @@ async def test_SELECTIVE_problem(
     async with test_session_getter() as session:
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         # 添加一个多选题
         problem_ids = await problem_service.add_problems(
@@ -527,7 +551,10 @@ async def test_search_edge_cases(
     async with test_session_getter() as session:
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         # 添加测试数据
         await problem_service.add_problems(
@@ -568,7 +595,9 @@ async def test_problem_count(
 ) -> None:
     """测试问题计数功能"""
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 初始计数应为0
         assert await problem_service.get_problem_count() == 0
 
@@ -619,7 +648,9 @@ async def test_problemset(test_session_getter: SessionGetterType) -> None:
         owner_id = await _create_user_simple(session, "test_owner2")
         await session.commit()
 
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         problemset_uuid, status = await problem_service.create_problemset(
             owner_id=owner_id,
             name="test",
@@ -687,7 +718,9 @@ async def test_advanced_search_operations(
 ) -> None:
     """测试高级搜索功能"""
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 添加多样化的测试数据
         problems_data = [
             ("Python编程基础知识", "Python", "编程语言", "基础", "高级"),
@@ -777,7 +810,9 @@ async def test_concurrent_operations(
 
     async def add_problems_batch(batch_id: int) -> None:
         async with test_session_getter() as session:
-            problem_service = ProblemService(session, problemset_repo, problem_repo)
+            problem_service = ProblemService(
+                session, problemset_repo, problem_repo, tag_repo
+            )
             problems = []
             for i in range(10):
                 problems.append(
@@ -805,7 +840,9 @@ async def test_concurrent_operations(
     await asyncio.gather(*tasks)
 
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         total_count = await problem_service.get_problem_count()
         assert total_count == 50  # 5个批次，每批10个问题
 
@@ -816,7 +853,9 @@ async def test_data_validation_and_constraints(
 ) -> None:
     """测试数据验证和约束"""
     async with test_session_getter() as session:
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 测试问题内容不能为空
         try:
             await problem_service.add_problems(
@@ -870,7 +909,7 @@ async def test_data_validation_and_constraints(
         await session.commit()
 
         # 验证选项顺序
-        problem = await query_problem(session, problem_ids[0])
+        problem = await problem_repo.get_by_id(session, problem_ids[0])
         assert problem is not None
         sorted_options = sorted(problem.details["options"], key=lambda x: x["order"])
         assert sorted_options[0]["content"] == "第一个"
@@ -890,7 +929,9 @@ async def test_problemset_operations_extended(
         owner_id = await _create_user_simple(session, "test_ops_extended_owner")
         await session.commit()
 
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 创建多个问题集
         ps1_id, status1 = await problem_service.create_problemset(
             owner_id=owner_id,
@@ -974,7 +1015,9 @@ async def test_edge_cases_and_error_handling(
         owner_id = await _create_user_simple(session, "test_edge_cases_owner")
         await session.commit()
 
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
         # 测试对不存在的问题集添加问题
         fake_problemset_id = uuid4()
         result = await problem_service.add_problems(
@@ -994,7 +1037,7 @@ async def test_edge_cases_and_error_handling(
 
         # 测试查询不存在的问题
         fake_problem_id = uuid4()
-        problem = await query_problem(session, fake_problem_id)
+        problem = await problem_repo.get_by_id(session, fake_problem_id)
         assert problem is None
 
         # 测试删除不存在的问题集
@@ -1027,7 +1070,10 @@ async def test_problem_types_and_options(
     async with test_session_getter() as session:
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         # 测试单选题（标准4选项）
         single_choice_id = await problem_service.add_problems(
@@ -1122,7 +1168,7 @@ async def test_problem_types_and_options(
         assert many_options_id is not None
 
         # 验证单选题
-        single_problem = await query_problem(session, single_choice_id[0])
+        single_problem = await problem_repo.get_by_id(session, single_choice_id[0])
         assert single_problem is not None
         assert single_problem.type == ProblemType.SELECTIVE
         correct_options = [
@@ -1132,7 +1178,7 @@ async def test_problem_types_and_options(
         assert correct_options[0]["content"] == "选项B"
 
         # 验证多选题
-        multi_problem = await query_problem(session, multi_choice_id[0])
+        multi_problem = await problem_repo.get_by_id(session, multi_choice_id[0])
         assert multi_problem is not None
         assert multi_problem.type == ProblemType.SELECTIVE
         correct_options = [
@@ -1141,12 +1187,12 @@ async def test_problem_types_and_options(
         assert len(correct_options) == 3
 
         # 验证二元选择题
-        binary_problem = await query_problem(session, binary_choice_id[0])
+        binary_problem = await problem_repo.get_by_id(session, binary_choice_id[0])
         assert binary_problem is not None
         assert len(binary_problem.details["options"]) == 2
 
         # 验证多选项题目
-        many_options_problem = await query_problem(session, many_options_id[0])
+        many_options_problem = await problem_repo.get_by_id(session, many_options_id[0])
         assert many_options_problem is not None
         assert len(many_options_problem.details["options"]) == 10
         correct_count = sum(
@@ -1193,7 +1239,10 @@ async def test_performance_and_bulk_operations(
 
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         result = await problem_service.add_problems(
             init_problemset_uuid, *bulk_problems
@@ -1328,7 +1377,10 @@ async def test_unicode_and_special_characters(
 
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         result = await problem_service.add_problems(
             init_problemset_uuid, *unicode_problems
@@ -1368,7 +1420,10 @@ async def test_database_integrity_and_relationships(
     async with test_session_getter() as session:
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         # 添加一个问题
         problem_ids = await problem_service.add_problems(
@@ -1443,7 +1498,10 @@ async def test_problem_sampling_variations(
 
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         await problem_service.add_problems(init_problemset_uuid, *mixed_problems)
         await session.commit()
@@ -1524,7 +1582,10 @@ async def test_complex_query_scenarios(
 
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         await problem_service.add_problems(init_problemset_uuid, *complex_problems)
         await session.commit()
@@ -1582,7 +1643,10 @@ async def test_data_consistency_after_operations(
     async with test_session_getter() as session:
         problemset_repo = ProblemSetRepository()
         problem_repo = ProblemRepository()
-        problem_service = ProblemService(session, problemset_repo, problem_repo)
+
+        problem_service = ProblemService(
+            session, problemset_repo, problem_repo, tag_repo
+        )
 
         # 记录初始状态
         initial_count = await problem_service.get_problem_count(init_problemset_uuid)
@@ -1645,17 +1709,23 @@ async def test_data_consistency_after_operations(
         assert after_delete_count == initial_count + 1
 
         # 验证剩余的问题是正确的
-        remaining_problem = await query_problem(session, problem_ids[1])
+        remaining_problem = await problem_repo.get_by_id(session, problem_ids[1])
         assert remaining_problem is not None
         assert remaining_problem.content == "一致性测试问题2"
 
         # 验证删除的问题确实不存在了
-        deleted_problem1 = await query_problem(session, problem_ids[0])
-        deleted_problem3 = await query_problem(session, problem_ids[2])
+        deleted_problem1 = await problem_repo.get_by_id(session, problem_ids[0])
+        deleted_problem3 = await problem_repo.get_by_id(session, problem_ids[2])
         assert deleted_problem1 is None
         assert deleted_problem3 is None
 
         # 搜索验证
-        search_results = await search_problem(session, "一致性测试")
+        search_results = await problem_repo.search(
+            session,
+            kw="一致性测试",
+            problemset_id=init_problemset_uuid,
+            page=1,
+            page_size=10,
+        )
         assert len(search_results) == 1
         assert search_results[0].content == "一致性测试问题2"
