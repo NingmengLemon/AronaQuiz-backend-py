@@ -131,7 +131,12 @@ async def test_problemset(
     resp = await test_client.post(
         "/api/v1/problemsets",
         headers=admin_auth_headers,
-        json={"name": PROBLEMSET_NAME_FOR_TEST},
+        json={
+            "name": PROBLEMSET_NAME_FOR_TEST,
+            "description": "通用题目集用于测试",
+            "is_public": True,
+            "tags": ["测试", "通用"]
+        },
     )
     result = resp.json()
     assert resp.status_code == 201, result
@@ -157,7 +162,12 @@ class TestProblemAPIs:
             resp = await test_client.post(
                 "/api/v1/problemsets",
                 headers=admin_auth_headers,
-                json={"name": name},
+                json={
+                    "name": name,
+                    "description": f"{name}的描述",
+                    "is_public": True,
+                    "tags": [name.replace("题库", ""), "题库"]
+                },
             )
             assert resp.status_code == 201
 
@@ -208,7 +218,12 @@ class TestProblemAPIs:
             resp = await test_client.post(
                 "/api/v1/problemsets",
                 headers=admin_auth_headers,
-                json={"name": name},
+                json={
+                    "name": name,
+                    "description": f"{name}的描述",
+                    "is_public": False,
+                    "tags": ["测试", "题库"]
+                },
             )
             assert resp.status_code == 201
 
@@ -272,7 +287,12 @@ class TestProblemAPIs:
         resp = await test_client.post(
             "/api/v1/problemsets",
             headers=admin_auth_headers,
-            json={"name": PROBLEMSET_NAME_FOR_TEST},
+            json={
+                "name": PROBLEMSET_NAME_FOR_TEST,
+                "description": "通用题目集用于测试",
+                "is_public": True,
+                "tags": ["测试", "通用"]
+            },
         )
         result = resp.json()
         assert resp.status_code == 409, result

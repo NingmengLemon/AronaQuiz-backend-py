@@ -14,7 +14,9 @@ class BaseProblem(BaseModel):
 
 class BaseProblemSet(BaseModel):
     name: str
-    explanation: str | None = None
+    description: str = ""
+    is_public: bool = False
+    tags: list[str] = []
 
 
 class SelectiveProblemSubmit(BaseProblem):

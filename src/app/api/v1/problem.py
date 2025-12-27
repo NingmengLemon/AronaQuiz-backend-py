@@ -29,13 +29,17 @@ logger = logging.getLogger("uvicorn.error")
     status_code=201,
 )
 async def create_problem_set(
+    current_user: LoginRequired,
     problem_service: ProblemServiceDep,
     problem_set: ProblemSetSubmit = Body(),
-    _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
 ) -> ApiResponse[ProblemSetCreateResponse]:
     """创建新的题目集"""
     id_, status = await problem_service.create_problemset(
-        problem_set.name,
+        owner_id=current_user.user_id,
+        name=problem_set.name,
+        description=problem_set.description,
+        is_public=problem_set.is_public,
+        tags=problem_set.tags,
     )
 
     if status == "ALREADY_EXISTS":
@@ -59,7 +63,7 @@ async def create_problem_set(
 )
 async def search_problem_sets(
     problem_service: ProblemServiceDep,
-    _: LoginRequired,
+    current_user: LoginRequired,
     keyword: str = Query("", description="搜索关键词，留空则不进行关键词筛选"),
     page: int = Query(1, ge=1, description="页码，从1开始"),
     page_size: int = Query(20, ge=1, le=10000, description="每页数量"),
@@ -80,7 +84,7 @@ async def search_problem_sets(
 )
 async def get_problemset_count(
     problem_service: ProblemServiceDep,
-    _: LoginRequired,
+    current_user: LoginRequired,
     keyword: str = Query("", description="搜索关键词，留空则统计所有题目集"),
 ) -> ApiResponse[int]:
     """获取题目集数量"""
@@ -120,7 +124,7 @@ async def create_problems(
 )
 async def search_problems(
     problem_service: ProblemServiceDep,
-    _: LoginRequired,
+    current_user: LoginRequired,
     keyword: str = Query("", description="搜索关键词，留空则不进行关键词筛选"),
     problemset_id: UUID | None = Query(
         None, description="题目集ID，留空则搜索所有题目集"
@@ -145,7 +149,7 @@ async def search_problems(
 )
 async def get_problem_count(
     problem_service: ProblemServiceDep,
-    _: LoginRequired,
+    current_user: LoginRequired,
     problemset_id: UUID | None = Query(None, description="题目集ID"),
 ) -> ApiResponse[int]:
     """获取题目数量"""
@@ -159,7 +163,7 @@ async def get_problem_count(
 )
 async def get_random_problems(
     problem_service: ProblemServiceDep,
-    _: LoginRequired,
+    current_user: LoginRequired,
     problemset_id: UUID = Query(description="题目集ID"),
     n: int = Query(20, ge=1, le=1000, description="抽取数量"),
 ) -> ApiResponse[list[ProblemResponse]]:

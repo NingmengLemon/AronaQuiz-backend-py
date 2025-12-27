@@ -1,9 +1,13 @@
 from enum import StrEnum, auto
+from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
-from sqlmodel import Field
+from sqlmodel import Field, Relationship
 
 from .base import BaseHasId
+
+if TYPE_CHECKING:
+    from .problem import DBProblemSet
 
 
 class UserRole(StrEnum):
@@ -20,3 +24,4 @@ class DBUser(BaseHasId, table=True):
     password_hash: str
     nickname: str = Field(unique=True)
     role: UserRole = UserRole.USER
+    problemsets: list["DBProblemSet"] = Relationship(back_populates="owner")

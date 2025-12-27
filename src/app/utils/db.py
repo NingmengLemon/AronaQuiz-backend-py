@@ -138,5 +138,5 @@ async def check_table_existence(session: AsyncSession, table: Table) -> bool:
     return existence
 
 
-def datetime_column_tzaware() -> Column[datetime]:
-    return Column(DateTime(timezone=True), nullable=False)
+def datetime_column_tzaware(onupdate: Any | None = None) -> Column[datetime]:
+    return Column(DateTime(timezone=True), nullable=False, onupdate=onupdate)

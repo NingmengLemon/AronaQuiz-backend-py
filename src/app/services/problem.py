@@ -23,17 +23,32 @@ class ProblemService:
         self.problem_set_repo = problemset_repo
         self.problem_repo = problem_repo
 
-    async def create_problemset(self, name: str) -> tuple[UUID, str]:
+    async def create_problemset(
+        self,
+        owner_id: UUID,
+        name: str,
+        is_public: bool,
+        tags: list[str],
+        description: str = "",
+    ) -> tuple[UUID, str]:
         """创建题目集"""
         name = name.strip()
 
-        # 检查是否已存在
-        existing = await self.problem_set_repo.get_by_name(self.session, name)
+        # 检查是否已存在同名题目集（在同一用户下）
+        existing = await self.problem_set_repo.get_by_owner_id_and_name(
+            self.session, owner_id, name
+        )
         if existing:
             return existing.id, "ALREADY_EXISTS"
 
         # 创建新题目集
-        problemset = DBProblemSet(name=name)
+        problemset = DBProblemSet(
+            owner_id=owner_id,
+            name=name,
+            description=description,
+            is_public=is_public,
+            tags=tags,
+        )
         created = await self.problem_set_repo.create(self.session, problemset)
         return created.id, "SUCCESS"
 

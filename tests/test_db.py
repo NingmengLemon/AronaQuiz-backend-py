@@ -40,9 +40,19 @@ async def init_problemset_uuid(
 ) -> AsyncGenerator[UUID, None]:
     logger.info("Initializing problem set UUID fixture.")
     async with test_session_getter() as session:
+        # 创建测试用户
+        owner_id = await _create_user_simple(session, "test_owner")
+        await session.commit()
+
         problem_service = ProblemService(session, problemset_repo, problem_repo)
         # 创建测试问题集
-        id_, status = await problem_service.create_problemset("test")
+        id_, status = await problem_service.create_problemset(
+            owner_id=owner_id,
+            name="test",
+            description="测试题目集",
+            is_public=False,
+            tags=["test", "example"],
+        )
         await session.commit()
         if status != "SUCCESS":
             # 如果已存在，获取已存在的问题集ID
@@ -52,7 +62,13 @@ async def init_problemset_uuid(
                 id_ = test_problemset[0]
             else:
                 # 创建新的问题集
-                id_, _ = await problem_service.create_problemset("test")
+                id_, _ = await problem_service.create_problemset(
+                    owner_id=owner_id,
+                    name="test",
+                    description="测试题目集",
+                    is_public=False,
+                    tags=["test", "example"],
+                )
         await session.commit()
     logger.info("Problem set UUID fixture initialized.")
     yield id_
@@ -155,9 +171,19 @@ async def test_multiadd(
     additional = 0
     start_time = time.time()
     async with test_session_getter() as session:
+        # 创建测试用户
+        owner_id = await _create_user_simple(session, "test_multiadd_owner")
+        await session.commit()
+
         problem_service = ProblemService(session, problemset_repo, problem_repo)
         for s in sheet_:
-            i, _ = await problem_service.create_problemset(s["name"])
+            i, _ = await problem_service.create_problemset(
+                owner_id=owner_id,
+                name=s["name"],
+                description=f"{s['name']}的描述",
+                is_public=True,
+                tags=["example"],
+            )
             await problem_service.add_problems(
                 i,
                 *[
@@ -587,18 +613,42 @@ async def test_problem_count(
 
 
 @pytest.mark.asyncio
-async def test_problemset(
-    test_session_getter: SessionGetterType, init_problemset_uuid: UUID
-) -> None:
+async def test_problemset(test_session_getter: SessionGetterType) -> None:
     async with test_session_getter() as session:
+        # 创建测试用户
+        owner_id = await _create_user_simple(session, "test_owner2")
+        await session.commit()
+
         problem_service = ProblemService(session, problemset_repo, problem_repo)
-        id_, status = await problem_service.create_problemset("test")
-        assert id_ == init_problemset_uuid
+        problemset_uuid, status = await problem_service.create_problemset(
+            owner_id=owner_id,
+            name="test",
+            description="测试题目集",
+            is_public=False,
+            tags=["test"],
+        )
+        assert status == "SUCCESS"
+        await session.commit()
+
+        id_, status = await problem_service.create_problemset(
+            owner_id=owner_id,
+            name="test",
+            description="测试题目集",
+            is_public=False,
+            tags=["test"],
+        )
+        assert id_ == problemset_uuid
         assert status == "ALREADY_EXISTS"
         await session.commit()
 
-        id_, status = await problem_service.create_problemset("test2")
-        assert id_ != init_problemset_uuid
+        id_, status = await problem_service.create_problemset(
+            owner_id=owner_id,
+            name="test2",
+            description="第二个测试题目集",
+            is_public=True,
+            tags=["test", "example"],
+        )
+        assert id_ != problemset_uuid
         assert status == "SUCCESS"
         await session.commit()
 
@@ -836,11 +886,33 @@ async def test_problemset_operations_extended(
     """测试问题集操作的扩展功能"""
 
     async with test_session_getter() as session:
+        # 创建测试用户
+        owner_id = await _create_user_simple(session, "test_ops_extended_owner")
+        await session.commit()
+
         problem_service = ProblemService(session, problemset_repo, problem_repo)
         # 创建多个问题集
-        ps1_id, status1 = await problem_service.create_problemset("数学题库")
-        ps2_id, status2 = await problem_service.create_problemset("英语题库")
-        ps3_id, status3 = await problem_service.create_problemset("计算机题库")
+        ps1_id, status1 = await problem_service.create_problemset(
+            owner_id=owner_id,
+            name="数学题库",
+            description="数学题目集合",
+            is_public=True,
+            tags=["数学", "题库"],
+        )
+        ps2_id, status2 = await problem_service.create_problemset(
+            owner_id=owner_id,
+            name="英语题库",
+            description="英语题目集合",
+            is_public=True,
+            tags=["英语", "题库"],
+        )
+        ps3_id, status3 = await problem_service.create_problemset(
+            owner_id=owner_id,
+            name="计算机题库",
+            description="计算机题目集合",
+            is_public=False,
+            tags=["计算机", "题库"],
+        )
         await session.commit()
 
         assert status1 == "SUCCESS"
@@ -898,6 +970,10 @@ async def test_edge_cases_and_error_handling(
     """测试边界情况和错误处理"""
 
     async with test_session_getter() as session:
+        # 创建测试用户
+        owner_id = await _create_user_simple(session, "test_edge_cases_owner")
+        await session.commit()
+
         problem_service = ProblemService(session, problemset_repo, problem_repo)
         # 测试对不存在的问题集添加问题
         fake_problemset_id = uuid4()
@@ -926,7 +1002,13 @@ async def test_edge_cases_and_error_handling(
         assert deleted_id is None
 
         # 测试从空问题集中抽样
-        empty_ps_id, _ = await problem_service.create_problemset("空问题集")
+        empty_ps_id, _ = await problem_service.create_problemset(
+            owner_id=owner_id,
+            name="空问题集",
+            description="空的问题集用于测试",
+            is_public=False,
+            tags=["测试"],
+        )
         await session.commit()
 
         sampled = await problem_service.sample_problems(empty_ps_id, 10)

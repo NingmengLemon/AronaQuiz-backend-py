@@ -16,15 +16,15 @@ class ProblemSetRepository(BaseRepository[DBProblemSet]):
     def __init__(self) -> None:
         super().__init__(DBProblemSet)
 
-    async def get_by_name(
-        self, session: AsyncSession, name: str
+    async def get_by_owner_id_and_name(
+        self, session: AsyncSession, owner_id: UUID, name: str
     ) -> DBProblemSet | None:
-        """根据名称获取题目集"""
-        return await self.get_by_field(session, "name", name.strip())
-
-    async def exists_by_name(self, session: AsyncSession, name: str) -> bool:
-        """检查题目集名称是否存在"""
-        return await self.exists_by_field(session, "name", name.strip())
+        """根据所有者ID和名称获取题目集"""
+        stmt = select(DBProblemSet).where(
+            DBProblemSet.owner_id == owner_id, DBProblemSet.name == name.strip()
+        )
+        result = await session.exec(stmt)
+        return result.first()
 
     async def list_with_count(
         self, session: AsyncSession

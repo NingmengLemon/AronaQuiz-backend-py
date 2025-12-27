@@ -1,7 +1,7 @@
 from collections.abc import Awaitable
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import Any, Literal, Type, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, Type, TypedDict
 from uuid import UUID
 
 from pydantic import (
@@ -9,7 +9,7 @@ from pydantic import (
     ValidationInfo,
     field_validator,
 )
-from sqlalchemy import Column, ForeignKey, Index, Uuid
+from sqlalchemy import Column, ForeignKey, Index, UniqueConstraint, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship
 
@@ -17,6 +17,9 @@ from app.utils.db import datetime_column_tzaware
 from app.utils.misc import utcnow
 
 from .base import AsyncAttrs, BaseHasId
+
+if TYPE_CHECKING:
+    from .user import DBUser
 
 
 class ProblemType(StrEnum):
@@ -86,19 +89,34 @@ class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
 
 class _ProblemSetAsyncAttrs:
     problems: Awaitable[list[DBProblem]]
+    owner: Awaitable["DBUser"]
 
 
 class DBProblemSet(BaseHasId, AsyncAttrs[_ProblemSetAsyncAttrs], table=True):
     __tablename__ = "problemset"
     name: str
-    created_by: UUID | None = None
-    description: str | None = None
+    description: str = Field(default="")
+    is_public: bool = Field(default=False)
+    tags: list[str] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False)
+    )
     created_at: datetime = Field(
         default_factory=utcnow,
         sa_column=datetime_column_tzaware(),
     )
+    updated_at: datetime = Field(
+        default_factory=utcnow,
+        sa_column=datetime_column_tzaware(onupdate=utcnow),
+    )
+
+    owner_id: UUID = Field(sa_column=Column(Uuid, ForeignKey("user.id")))
+    owner: "DBUser" = Relationship(back_populates="problemsets")
 
     problems: list[DBProblem] = Relationship(
         back_populates="problemset",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+    __table_args__ = (
+        UniqueConstraint("owner_id", "name", name="uq_problemset_owner_id_name"),
     )
