@@ -1,7 +1,7 @@
-from typing import Any, Literal
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.db.problem import ProblemType, SelectiveProblemDetails
 
@@ -52,3 +52,21 @@ class LoginByUserIdSubmit(BaseModel):
 
 class RefreshTokenSubmit(BaseModel):
     refresh_token: UUID
+
+
+# Tag相关的请求模型
+class TagCreateRequest(BaseModel):
+    """创建标签请求模型"""
+    name: str = Field(..., min_length=1, max_length=30, description="标签名称")
+
+
+class TagUpdateRequest(BaseModel):
+    """更新标签请求模型"""
+    name: str = Field(..., min_length=1, max_length=30, description="新的标签名称")
+
+
+class TagSearchRequest(BaseModel):
+    """标签搜索请求模型"""
+    keyword: str | None = Field(None, description="搜索关键词")
+    page: int = Field(1, ge=1, description="页码，从1开始")
+    page_size: int = Field(20, ge=1, le=100, description="每页数量")

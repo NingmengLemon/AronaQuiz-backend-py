@@ -96,3 +96,39 @@ class RefreshTokenResponse(BaseModel):
 class LoginSuccessResponse(BaseModel):
     access_token: UUID
     refresh_token: UUID
+
+
+# Tag相关的响应模型
+class TagResponse(BaseModel):
+    """标签响应模型"""
+    id: UUID
+    name: str
+
+
+class TagDetailResponse(TagResponse):
+    """标签详情响应模型"""
+    problem_count: int = 0
+    problemset_count: int = 0
+
+
+class TagCreateResponse(BaseModel):
+    """标签创建响应模型"""
+    id: UUID
+    name: str
+    message: str = "标签创建成功"
+
+
+class TagUpdateResponse(BaseModel):
+    """标签更新响应模型"""
+    id: UUID
+    old_name: str
+    new_name: str
+    message: str = "标签更新成功"
+
+
+class TagListResponse(BaseModel):
+    """标签列表响应模型"""
+    tags: list[TagResponse]
+    total: int
+    page: int
+    page_size: int

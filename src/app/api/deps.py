@@ -27,10 +27,11 @@ from app.models.db.user import (
 from app.models.dto.code import BusinessCode
 from app.repos.auth import AuthRepository
 from app.repos.problem import ProblemRepository, ProblemSetRepository
-from app.repos.user import UserRepository
 from app.repos.tag import TagRepository
+from app.repos.user import UserRepository
 from app.services.auth import AuthService
 from app.services.problem import ProblemService
+from app.services.tag import TagService
 from app.services.user import UserService
 from app.utils.speedlimit import get_ipaddr, get_remote_address
 
@@ -64,9 +65,7 @@ async def _speedlimit_entrance(request: Request) -> Request:
         return request
     else:
         raise APIException(
-            status_code=429,
-            code=BusinessCode.TOO_MANY_REQUESTS,
-            message="请慢一点...!"
+            status_code=429, code=BusinessCode.TOO_MANY_REQUESTS, message="请慢一点...!"
         )
 
 
@@ -155,6 +154,21 @@ def get_problem_service(session: DbSessionDep) -> ProblemService:
 ProblemServiceDep = Annotated[
     ProblemService,
     Depends(get_problem_service),
+]
+
+
+def get_tag_service(session: DbSessionDep) -> TagService:
+    """获取标签服务实例"""
+    tag_repo = TagRepository()
+    return TagService(
+        session=session,
+        tag_repo=tag_repo,
+    )
+
+
+TagServiceDep = Annotated[
+    TagService,
+    Depends(get_tag_service),
 ]
 
 
