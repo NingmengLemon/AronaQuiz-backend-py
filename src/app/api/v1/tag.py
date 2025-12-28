@@ -15,6 +15,10 @@ from app.models.dto.response import (
     TagCreateResponse,
     TagDetailResponse,
     TagListResponse,
+    TagProblemResponse,
+    TagProblemsResponse,
+    TagProblemSetResponse,
+    TagProblemSetsResponse,
     TagResponse,
     TagUpdateResponse,
 )
@@ -145,7 +149,7 @@ async def update_tag(
             message="标签名称只能包含字母、数字、下划线和连字符，且长度在1-30个字符之间",
         )
 
-    # 获取原始标签信息
+    # 获取原始标签信息并保存原始名称
     original_tag = await tag_service.get_tag_by_id(tag_id)
     if not original_tag:
         raise APIException(
@@ -153,6 +157,7 @@ async def update_tag(
             code=BusinessCode.NOT_FOUND,
             message=f"标签 {tag_id} 不存在",
         )
+    original_name = original_tag.name  # 保存原始名称
 
     updated_tag = await tag_service.update_tag(tag_id, tag_data.name)
     if not updated_tag:
@@ -165,7 +170,7 @@ async def update_tag(
     return ResponseUtil.success(
         data=TagUpdateResponse(
             id=updated_tag.id,
-            old_name=original_tag.name,
+            old_name=original_name,  # 使用保存的原始名称
             new_name=updated_tag.name,
             message="标签更新成功",
         ),
@@ -201,7 +206,7 @@ async def get_tag_problems(
     tag_service: TagServiceDep,
     current_user: LoginRequired,
     tag_id: UUID,
-) -> ApiResponse[list[dict]]:
+) -> ApiResponse[TagProblemsResponse]:
     """获取使用该标签的所有题目"""
     tag = await tag_service.get_tag_by_id(tag_id)
     if not tag:
@@ -213,18 +218,24 @@ async def get_tag_problems(
 
     problems = await tag_service.get_tag_problems(tag_id)
 
-    # 转换为简单的响应格式
+    # 转换为结构化的响应格式
     problem_responses = [
-        {
-            "id": problem.id,
-            "content": problem.content,
-            "type": problem.type.value,
-            "problemset_id": problem.problemset_id,
-        }
+        TagProblemResponse(
+            id=problem.id,
+            content=problem.content,
+            type=problem.type,
+            problemset_id=problem.problemset_id,
+        )
         for problem in problems
     ]
 
-    return ResponseUtil.success(data=problem_responses)
+    return ResponseUtil.success(
+        data=TagProblemsResponse(
+            tag=TagResponse(id=tag.id, name=tag.name),
+            problems=problem_responses,
+            total=len(problem_responses),
+        )
+    )
 
 
 @router.get(
@@ -235,7 +246,7 @@ async def get_tag_problemsets(
     tag_service: TagServiceDep,
     current_user: LoginRequired,
     tag_id: UUID,
-) -> ApiResponse[list[dict]]:
+) -> ApiResponse[TagProblemSetsResponse]:
     """获取使用该标签的所有题目集"""
     tag = await tag_service.get_tag_by_id(tag_id)
     if not tag:
@@ -247,16 +258,22 @@ async def get_tag_problemsets(
 
     problemsets = await tag_service.get_tag_problemsets(tag_id)
 
-    # 转换为简单的响应格式
+    # 转换为结构化的响应格式
     problemset_responses = [
-        {
-            "id": problemset.id,
-            "name": problemset.name,
-            "description": problemset.description,
-            "is_public": problemset.is_public,
-            "owner_id": problemset.owner_id,
-        }
+        TagProblemSetResponse(
+            id=problemset.id,
+            name=problemset.name,
+            description=problemset.description,
+            is_public=problemset.is_public,
+            owner_id=problemset.owner_id,
+        )
         for problemset in problemsets
     ]
 
-    return ResponseUtil.success(data=problemset_responses)
+    return ResponseUtil.success(
+        data=TagProblemSetsResponse(
+            tag=TagResponse(id=tag.id, name=tag.name),
+            problemsets=problemset_responses,
+            total=len(problemset_responses),
+        )
+    )

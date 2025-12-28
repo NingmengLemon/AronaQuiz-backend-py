@@ -66,6 +66,14 @@ class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
     tags: list["DBTag"] = Relationship(
         back_populates="problems", link_model=ProblemTagLink
     )
+    created_at: datetime = Field(
+        default_factory=utcnow,
+        sa_column=datetime_column_tzaware(),
+    )
+    updated_at: datetime = Field(
+        default_factory=utcnow,
+        sa_column=datetime_column_tzaware(onupdate=utcnow),
+    )
 
     __table_args__ = (
         Index("ix_problem_details_gin", "details", postgresql_using="gin"),

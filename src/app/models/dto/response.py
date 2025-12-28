@@ -132,3 +132,34 @@ class TagListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class TagProblemResponse(BaseModel):
+    """标签关联的题目响应模型"""
+    id: UUID
+    content: str
+    type: ProblemType
+    problemset_id: UUID
+
+
+class TagProblemSetResponse(BaseModel):
+    """标签关联的题目集响应模型"""
+    id: UUID
+    name: str
+    description: str | None
+    is_public: bool
+    owner_id: UUID
+
+
+class TagProblemsResponse(BaseModel):
+    """标签关联题目列表响应模型"""
+    tag: TagResponse
+    problems: list[TagProblemResponse]
+    total: int
+
+
+class TagProblemSetsResponse(BaseModel):
+    """标签关联题目集列表响应模型"""
+    tag: TagResponse
+    problemsets: list[TagProblemSetResponse]
+    total: int

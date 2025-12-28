@@ -1145,3 +1145,395 @@ class TestSessionAPIs:
         headers = {"Authorization": "Bearer invalid-token"}
         resp = await test_client.get("/api/v1/users/me", headers=headers)
         assert resp.status_code == 401, resp.json()
+
+
+class TestTagAPIs:
+    """标签API测试"""
+
+    @pytest.mark.asyncio
+    async def test_list_tags(
+        self,
+        test_client: AsyncClient,
+        cu_auth_headers: dict[str, str],
+        admin_auth_headers: dict[str, str],
+        test_problemset: UUID,
+    ) -> None:
+        """测试获取标签列表"""
+        # 先通过创建问题集来创建一些标签
+        resp = await test_client.post(
+            "/api/v1/problemsets",
+            headers=admin_auth_headers,
+            json={
+                "name": "标签测试题目集",
+                "description": "用于测试标签的题目集",
+                "is_public": True,
+                "tags": ["Python", "编程", "测试"],
+            },
+        )
+        assert resp.status_code == 201
+
+        # 测试获取所有标签
+        resp = await test_client.get(
+            "/api/v1/tags",
+            headers=cu_auth_headers,
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is True
+        assert "data" in result
+        assert "tags" in result["data"]
+        assert "total" in result["data"]
+        assert "page" in result["data"]
+        assert "page_size" in result["data"]
+        assert len(result["data"]["tags"]) >= 3  # 至少包含Python, 编程, 测试
+
+        # 测试关键词搜索
+        resp = await test_client.get(
+            "/api/v1/tags",
+            headers=cu_auth_headers,
+            params={"keyword": "Python"},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is True
+        assert len(result["data"]["tags"]) >= 1
+        assert any(tag["name"] == "Python" for tag in result["data"]["tags"])
+
+        # 测试分页
+        resp = await test_client.get(
+            "/api/v1/tags",
+            headers=cu_auth_headers,
+            params={"page": 1, "page_size": 2},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert len(result["data"]["tags"]) == 2
+
+    @pytest.mark.asyncio
+    async def test_get_tag_detail(
+        self,
+        test_client: AsyncClient,
+        cu_auth_headers: dict[str, str],
+        admin_auth_headers: dict[str, str],
+        test_problemset: UUID,
+    ) -> None:
+        """测试获取标签详情"""
+        # 先获取一个标签
+        resp = await test_client.get(
+            "/api/v1/tags",
+            headers=cu_auth_headers,
+            params={"keyword": "测试"},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert len(result["data"]["tags"]) >= 1
+        tag_id = result["data"]["tags"][0]["id"]
+
+        # 测试获取标签详情
+        resp = await test_client.get(
+            f"/api/v1/tags/{tag_id}",
+            headers=cu_auth_headers,
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is True
+        assert "data" in result
+        assert result["data"]["id"] == tag_id
+        assert "name" in result["data"]
+        assert "problem_count" in result["data"]
+        assert "problemset_count" in result["data"]
+
+        # 测试获取不存在的标签
+        fake_tag_id = "12345678-1234-1234-1234-123456789012"
+        resp = await test_client.get(
+            f"/api/v1/tags/{fake_tag_id}",
+            headers=cu_auth_headers,
+        )
+        result = resp.json()
+        assert resp.status_code == 404, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.NOT_FOUND
+
+    @pytest.mark.asyncio
+    async def test_create_tag(
+        self,
+        test_client: AsyncClient,
+        admin_auth_headers: dict[str, str],
+        cu_auth_headers: dict[str, str],
+    ) -> None:
+        """测试创建标签（需要管理员权限）"""
+        # 测试普通用户无权限创建标签
+        resp = await test_client.post(
+            "/api/v1/tags",
+            headers=cu_auth_headers,
+            json={"name": "新标签"},
+        )
+        assert resp.status_code == 403
+
+        # 测试管理员创建标签
+        resp = await test_client.post(
+            "/api/v1/tags",
+            headers=admin_auth_headers,
+            json={"name": "新标签"},
+        )
+        result = resp.json()
+        assert resp.status_code == 201, result
+        assert result["success"] is True
+        assert "data" in result
+        assert "id" in result["data"]
+        assert result["data"]["name"] == "新标签"
+        assert result["data"]["message"] == "标签创建成功"
+
+        # 测试创建重复标签
+        resp = await test_client.post(
+            "/api/v1/tags",
+            headers=admin_auth_headers,
+            json={"name": "新标签"},
+        )
+        result = resp.json()
+        assert resp.status_code == 409, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.CONFLICT
+
+        # 测试创建无效标签名称
+        resp = await test_client.post(
+            "/api/v1/tags",
+            headers=admin_auth_headers,
+            json={"name": "无效标签名称@#$"},
+        )
+        result = resp.json()
+        assert resp.status_code == 400, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.VALIDATION_ERROR
+
+    @pytest.mark.asyncio
+    async def test_update_tag(
+        self,
+        test_client: AsyncClient,
+        admin_auth_headers: dict[str, str],
+        cu_auth_headers: dict[str, str],
+    ) -> None:
+        """测试更新标签（需要管理员权限）"""
+        # 先创建一个标签
+        resp = await test_client.post(
+            "/api/v1/tags",
+            headers=admin_auth_headers,
+            json={"name": "待更新标签"},
+        )
+        result = resp.json()
+        assert resp.status_code == 201, result
+        tag_id = result["data"]["id"]
+
+        # 测试普通用户无权限更新标签
+        resp = await test_client.put(
+            f"/api/v1/tags/{tag_id}",
+            headers=cu_auth_headers,
+            json={"name": "更新后的标签"},
+        )
+        assert resp.status_code == 403
+
+        # 测试管理员更新标签
+        resp = await test_client.put(
+            f"/api/v1/tags/{tag_id}",
+            headers=admin_auth_headers,
+            json={"name": "更新后的标签"},
+        )
+        result = resp.json()
+        print(f"DEBUG: Update response: {result}")  # 添加调试输出
+        assert resp.status_code == 200, result
+        assert result["success"] is True
+        assert result["data"]["id"] == tag_id
+        print(f"DEBUG: old_name = {result['data'].get('old_name')}, expected = '待更新标签'")
+        print(f"DEBUG: new_name = {result['data'].get('new_name')}, expected = '更新后的标签'")
+        assert result["data"]["old_name"] == "待更新标签"
+        assert result["data"]["new_name"] == "更新后的标签"
+        assert result["data"]["message"] == "标签更新成功"
+
+        # 测试更新不存在的标签
+        fake_tag_id = "12345678-1234-1234-1234-123456789012"
+        resp = await test_client.put(
+            f"/api/v1/tags/{fake_tag_id}",
+            headers=admin_auth_headers,
+            json={"name": "新名称"},
+        )
+        result = resp.json()
+        assert resp.status_code == 404, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.NOT_FOUND
+
+        # 测试更新为已存在的标签名称
+        # 先创建另一个标签
+        resp = await test_client.post(
+            "/api/v1/tags",
+            headers=admin_auth_headers,
+            json={"name": "另一个标签"},
+        )
+        assert resp.status_code == 201
+
+        # 尝试将第一个标签更新为相同名称
+        resp = await test_client.put(
+            f"/api/v1/tags/{tag_id}",
+            headers=admin_auth_headers,
+            json={"name": "另一个标签"},
+        )
+        result = resp.json()
+        assert resp.status_code == 409, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.CONFLICT
+
+    @pytest.mark.asyncio
+    async def test_delete_tag(
+        self,
+        test_client: AsyncClient,
+        admin_auth_headers: dict[str, str],
+        cu_auth_headers: dict[str, str],
+    ) -> None:
+        """测试删除标签（需要管理员权限）"""
+        # 先创建一个标签
+        resp = await test_client.post(
+            "/api/v1/tags",
+            headers=admin_auth_headers,
+            json={"name": "待删除标签"},
+        )
+        result = resp.json()
+        assert resp.status_code == 201, result
+        tag_id = result["data"]["id"]
+
+        # 测试普通用户无权限删除标签
+        resp = await test_client.delete(
+            f"/api/v1/tags/{tag_id}",
+            headers=cu_auth_headers,
+        )
+        assert resp.status_code == 403
+
+        # 测试管理员删除标签
+        resp = await test_client.delete(
+            f"/api/v1/tags/{tag_id}",
+            headers=admin_auth_headers,
+        )
+        assert resp.status_code == 204
+
+        # 验证标签已被删除
+        resp = await test_client.get(
+            f"/api/v1/tags/{tag_id}",
+            headers=cu_auth_headers,
+        )
+        result = resp.json()
+        assert resp.status_code == 404, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.NOT_FOUND
+
+        # 测试删除不存在的标签
+        fake_tag_id = "12345678-1234-1234-1234-123456789012"
+        resp = await test_client.delete(
+            f"/api/v1/tags/{fake_tag_id}",
+            headers=admin_auth_headers,
+        )
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_get_tag_problems(
+        self,
+        test_client: AsyncClient,
+        cu_auth_headers: dict[str, str],
+        admin_auth_headers: dict[str, str],
+        test_problemset: UUID,
+    ) -> None:
+        """测试获取标签关联的题目"""
+        # 先获取一个标签
+        resp = await test_client.get(
+            "/api/v1/tags",
+            headers=cu_auth_headers,
+            params={"keyword": "测试"},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert len(result["data"]["tags"]) >= 1
+        tag_id = result["data"]["tags"][0]["id"]
+
+        # 测试获取标签关联的题目
+        resp = await test_client.get(
+            f"/api/v1/tags/{tag_id}/problems",
+            headers=cu_auth_headers,
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is True
+        assert "data" in result
+        assert "tag" in result["data"]
+        assert "problems" in result["data"]
+        assert "total" in result["data"]
+        assert result["data"]["tag"]["id"] == tag_id
+
+        # 验证响应结构
+        if result["data"]["problems"]:
+            problem = result["data"]["problems"][0]
+            assert "id" in problem
+            assert "content" in problem
+            assert "type" in problem
+            assert "problemset_id" in problem
+
+        # 测试获取不存在的标签的题目
+        fake_tag_id = "12345678-1234-1234-1234-123456789012"
+        resp = await test_client.get(
+            f"/api/v1/tags/{fake_tag_id}/problems",
+            headers=cu_auth_headers,
+        )
+        result = resp.json()
+        assert resp.status_code == 404, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.NOT_FOUND
+
+    @pytest.mark.asyncio
+    async def test_get_tag_problemsets(
+        self,
+        test_client: AsyncClient,
+        cu_auth_headers: dict[str, str],
+        admin_auth_headers: dict[str, str],
+        test_problemset: UUID,
+    ) -> None:
+        """测试获取标签关联的题目集"""
+        # 先获取一个标签
+        resp = await test_client.get(
+            "/api/v1/tags",
+            headers=cu_auth_headers,
+            params={"keyword": "测试"},
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert len(result["data"]["tags"]) >= 1
+        tag_id = result["data"]["tags"][0]["id"]
+
+        # 测试获取标签关联的题目集
+        resp = await test_client.get(
+            f"/api/v1/tags/{tag_id}/problemsets",
+            headers=cu_auth_headers,
+        )
+        result = resp.json()
+        assert resp.status_code == 200, result
+        assert result["success"] is True
+        assert "data" in result
+        assert "tag" in result["data"]
+        assert "problemsets" in result["data"]
+        assert "total" in result["data"]
+        assert result["data"]["tag"]["id"] == tag_id
+
+        # 验证响应结构
+        if result["data"]["problemsets"]:
+            problemset = result["data"]["problemsets"][0]
+            assert "id" in problemset
+            assert "name" in problemset
+            assert "description" in problemset
+            assert "is_public" in problemset
+            assert "owner_id" in problemset
+
+        # 测试获取不存在的标签的题目集
+        fake_tag_id = "12345678-1234-1234-1234-123456789012"
+        resp = await test_client.get(
+            f"/api/v1/tags/{fake_tag_id}/problemsets",
+            headers=cu_auth_headers,
+        )
+        result = resp.json()
+        assert resp.status_code == 404, result
+        assert result["success"] is False
+        assert result["code"] == BusinessCode.NOT_FOUND
