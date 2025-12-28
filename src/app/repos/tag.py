@@ -14,6 +14,9 @@ class TagRepository(BaseRepository[DBTag]):
     async def get_or_create_tags(
         self, session: AsyncSession, tag_names: Sequence[str]
     ) -> list[DBTag]:
+        """获取或创建标签
+
+        会创建不存在的标签, 谨慎使用"""
         if not tag_names:
             return []
 
@@ -32,6 +35,15 @@ class TagRepository(BaseRepository[DBTag]):
                 await session.refresh(tag)  # Refresh to load all fields, including id
 
         return existing_tags + new_tags
+
+    async def get_existing_tags(
+        self, session: AsyncSession, tag_names: Sequence[str]
+    ) -> list[DBTag]:
+        """只获取已存在的标签, 不创建新标签"""
+        if not tag_names:
+            return []
+
+        return await self.get_by_names(session, tag_names)
 
     async def get_by_names(
         self, session: AsyncSession, tag_names: Sequence[str]

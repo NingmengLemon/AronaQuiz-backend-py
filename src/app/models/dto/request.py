@@ -22,6 +22,7 @@ class BaseProblemSet(BaseModel):
 class SelectiveProblemSubmit(BaseProblem):
     type: Literal[ProblemType.SELECTIVE] = ProblemType.SELECTIVE
     details: SelectiveProblemDetails
+    tags: list[str] = Field(default_factory=list, description="题目标签")
 
 
 type ProblemSubmit = SelectiveProblemSubmit  # |...

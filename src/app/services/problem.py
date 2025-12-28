@@ -52,11 +52,15 @@ class ProblemService:
         if existing:
             return existing.id, "ALREADY_EXISTS"
 
-        # 获取或创建标签
+        # 只获取已存在的标签，不创建新标签
+        db_tags = []
         if tags:
-            db_tags = await self.tag_repo.get_or_create_tags(self.session, tags)
-        else:
-            db_tags = []
+            db_tags = await self.tag_repo.get_existing_tags(self.session, tags)
+            # 检查是否有不存在的标签
+            existing_tag_names = {tag.name for tag in db_tags}
+            missing_tags = [tag for tag in tags if tag not in existing_tag_names]
+            if missing_tags:
+                raise ValueError(f"以下标签不存在: {', '.join(missing_tags)}")
 
         # 创建新题目集
         problemset = DBProblemSet(
@@ -84,9 +88,24 @@ class ProblemService:
         added_problems = []
         for problem_data in problems:
             if problem_data.type == ProblemType.SELECTIVE:
+                # 获取题目标签
+                db_tags = []
+                if problem_data.tags:
+                    # 只使用已存在的标签
+                    db_tags = await self.tag_repo.get_existing_tags(self.session, problem_data.tags)
+                    # 检查是否有不存在的标签
+                    existing_tag_names = {tag.name for tag in db_tags}
+                    missing_tags = [tag for tag in problem_data.tags if tag not in existing_tag_names]
+                    if missing_tags:
+                        raise ValueError(f"以下标签不存在: {', '.join(missing_tags)}")
+
                 problem = DBProblem.model_validate(
                     problem_data,
-                    update={"problemset_id": problemset.id, "problemset": problemset},
+                    update={
+                        "problemset_id": problemset.id,
+                        "problemset": problemset,
+                        "tags": db_tags,
+                    },
                 )
                 created = await self.problem_repo.create(self.session, problem)
                 added_problems.append(created.id)
