@@ -52,6 +52,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
+    # actually, we don't use offline mode, but keep the function for completeness
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
