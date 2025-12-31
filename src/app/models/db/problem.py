@@ -1,7 +1,7 @@
 from collections.abc import Awaitable
 from datetime import datetime
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Any, Literal, Type, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 from uuid import UUID
 
 from pydantic import (
@@ -50,6 +50,10 @@ class _ProblemAsyncAttrs:
 PROBLEM_DETAIL_TYPE_MAPPING: dict[ProblemType, type[ProblemDetails]] = {
     ProblemType.SELECTIVE: SelectiveProblemDetails,
 }
+PROBLEM_DETAIL_TYPE_ADAPTERS: dict[ProblemType, TypeAdapter[ProblemDetails]] = {
+    problem_type: TypeAdapter(detail_model)
+    for problem_type, detail_model in PROBLEM_DETAIL_TYPE_MAPPING.items()
+}
 
 
 class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
@@ -61,7 +65,7 @@ class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
 
     problemset_id: UUID = Field(
         sa_column=Column(Uuid, ForeignKey("problemset.id", ondelete="CASCADE"))
-    )
+    )  
     problemset: "DBProblemSet" = Relationship(back_populates="problems")
     tags: list["DBTag"] = Relationship(
         back_populates="problems", link_model=ProblemTagLink
@@ -79,15 +83,6 @@ class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
         Index("ix_problem_details_gin", "details", postgresql_using="gin"),
     )
 
-    @staticmethod
-    def problem_type_to_detail_model(
-        problem_type: ProblemType,
-    ) -> Type[ProblemDetails]:
-        detail_model = PROBLEM_DETAIL_TYPE_MAPPING.get(problem_type)
-        if not detail_model:
-            raise ValueError(f"unknown problem type: {problem_type}")
-        return detail_model
-
     @field_validator("details", mode="after")
     @classmethod
     def _validate_details_by_type(
@@ -96,9 +91,39 @@ class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
         problem_type: ProblemType | None = info.data.get("type")
         if not problem_type:
             raise ValueError("unable to determine problem type")
-        detail_model = cls.problem_type_to_detail_model(problem_type)
-        adapter = TypeAdapter(detail_model)
-        return adapter.validate_python(value)
+        adapter = PROBLEM_DETAIL_TYPE_ADAPTERS.get(problem_type)
+        if not adapter:
+            raise ValueError(f"unknown problem type: {problem_type}")
+        value_validated = adapter.validate_python(value)
+
+        # detail validations
+        match problem_type:
+            case ProblemType.SELECTIVE:
+                if (
+                    sum(
+                        value_validated["options"][i]["is_correct"]
+                        for i in range(len(value_validated["options"]))
+                    )
+                    == 0
+                ):
+                    raise ValueError("至少需要一个正确选项")
+                elif (value_validated["type"] == "single") and (
+                    sum(
+                        value_validated["options"][i]["is_correct"]
+                        for i in range(len(value_validated["options"]))
+                    )
+                    > 1
+                ):
+                    raise ValueError("单选题只能有一个正确选项")
+                elif value_validated["type"] == "multiple" and all(
+                    option["is_correct"] is False
+                    for option in value_validated["options"]
+                ):
+                    raise ValueError("多选题至少需要一个正确选项")
+                elif len(value_validated["options"]) < 2:
+                    raise ValueError("选项数量不能少于两个")
+
+        return value_validated
 
 
 class _ProblemSetAsyncAttrs:
