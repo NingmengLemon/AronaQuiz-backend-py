@@ -88,10 +88,16 @@ class ProblemService:
                 db_tags = []
                 if problem_data.tags:
                     # 只使用已存在的标签
-                    db_tags = await self.tag_repo.get_existing_tags(self.session, problem_data.tags)
+                    db_tags = await self.tag_repo.get_existing_tags(
+                        self.session, problem_data.tags
+                    )
                     # 检查是否有不存在的标签
                     existing_tag_names = {tag.name for tag in db_tags}
-                    missing_tags = [tag for tag in problem_data.tags if tag not in existing_tag_names]
+                    missing_tags = [
+                        tag
+                        for tag in problem_data.tags
+                        if tag not in existing_tag_names
+                    ]
                     if missing_tags:
                         raise ValueError(f"以下标签不存在: {', '.join(missing_tags)}")
 

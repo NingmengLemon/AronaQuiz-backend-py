@@ -49,6 +49,6 @@ class BusinessCode(IntEnum):
     INTERNAL_ERROR = 500000
     DATABASE_ERROR = 500001
     UNKNOWN_ERROR = 500002
-    
+
     # 限流错误
     TOO_MANY_REQUESTS = 429000

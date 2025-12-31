@@ -101,18 +101,21 @@ class LoginSuccessResponse(BaseModel):
 # Tag相关的响应模型
 class TagResponse(BaseModel):
     """标签响应模型"""
+
     id: UUID
     name: str
 
 
 class TagDetailResponse(TagResponse):
     """标签详情响应模型"""
+
     problem_count: int = 0
     problemset_count: int = 0
 
 
 class TagCreateResponse(BaseModel):
     """标签创建响应模型"""
+
     id: UUID
     name: str
     message: str = "标签创建成功"
@@ -120,6 +123,7 @@ class TagCreateResponse(BaseModel):
 
 class TagUpdateResponse(BaseModel):
     """标签更新响应模型"""
+
     id: UUID
     old_name: str
     new_name: str
@@ -128,6 +132,7 @@ class TagUpdateResponse(BaseModel):
 
 class TagListResponse(BaseModel):
     """标签列表响应模型"""
+
     tags: list[TagResponse]
     total: int
     page: int
@@ -136,6 +141,7 @@ class TagListResponse(BaseModel):
 
 class TagProblemResponse(BaseModel):
     """标签关联的题目响应模型"""
+
     id: UUID
     content: str
     type: ProblemType
@@ -144,6 +150,7 @@ class TagProblemResponse(BaseModel):
 
 class TagProblemSetResponse(BaseModel):
     """标签关联的题目集响应模型"""
+
     id: UUID
     name: str
     description: str | None
@@ -153,6 +160,7 @@ class TagProblemSetResponse(BaseModel):
 
 class TagProblemsResponse(BaseModel):
     """标签关联题目列表响应模型"""
+
     tag: TagResponse
     problems: list[TagProblemResponse]
     total: int
@@ -160,6 +168,7 @@ class TagProblemsResponse(BaseModel):
 
 class TagProblemSetsResponse(BaseModel):
     """标签关联题目集列表响应模型"""
+
     tag: TagResponse
     problemsets: list[TagProblemSetResponse]
     total: int
