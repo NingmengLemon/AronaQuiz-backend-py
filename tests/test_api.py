@@ -135,7 +135,7 @@ async def test_problemset(
             "name": PROBLEMSET_NAME_FOR_TEST,
             "description": "通用题目集用于测试",
             "is_public": True,
-            "tags": ["测试", "通用"]
+            "tags": ["测试", "通用"],
         },
     )
     result = resp.json()
@@ -166,7 +166,7 @@ class TestProblemAPIs:
                     "name": name,
                     "description": f"{name}的描述",
                     "is_public": True,
-                    "tags": [name.replace("题库", ""), "题库"]
+                    "tags": [name.replace("题库", ""), "题库"],
                 },
             )
             assert resp.status_code == 201
@@ -222,7 +222,7 @@ class TestProblemAPIs:
                     "name": name,
                     "description": f"{name}的描述",
                     "is_public": False,
-                    "tags": ["测试", "题库"]
+                    "tags": ["测试", "题库"],
                 },
             )
             assert resp.status_code == 201
@@ -291,7 +291,7 @@ class TestProblemAPIs:
                 "name": PROBLEMSET_NAME_FOR_TEST,
                 "description": "通用题目集用于测试",
                 "is_public": True,
-                "tags": ["测试", "通用"]
+                "tags": ["测试", "通用"],
             },
         )
         result = resp.json()
@@ -682,11 +682,15 @@ class TestProblemAPIs:
         """测试普通用户无权限添加题目"""
         problem_data = [
             {
-                "content": "权限测试题目",
-                "type": "single_select",
-                "options": [
-                    {"content": "答案", "is_correct": True, "order": 0},
-                ],
+                "content": "权限测试",
+                "type": "selective",
+                "details": {
+                    "type": "single",
+                    "options": [
+                        {"content": "答案1", "is_correct": False, "order": 0},
+                        {"content": "答案2", "is_correct": True, "order": 1},
+                    ],
+                },
             }
         ]
 
@@ -1343,8 +1347,12 @@ class TestTagAPIs:
         assert resp.status_code == 200, result
         assert result["success"] is True
         assert result["data"]["id"] == tag_id
-        print(f"DEBUG: old_name = {result['data'].get('old_name')}, expected = '待更新标签'")
-        print(f"DEBUG: new_name = {result['data'].get('new_name')}, expected = '更新后的标签'")
+        print(
+            f"DEBUG: old_name = {result['data'].get('old_name')}, expected = '待更新标签'"
+        )
+        print(
+            f"DEBUG: new_name = {result['data'].get('new_name')}, expected = '更新后的标签'"
+        )
         assert result["data"]["old_name"] == "待更新标签"
         assert result["data"]["new_name"] == "更新后的标签"
         assert result["data"]["message"] == "标签更新成功"
