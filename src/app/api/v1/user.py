@@ -3,11 +3,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Query
 
-from app.api.deps import (
+from app.api.deps.checkers import LoginRequired, RequireRoles, SpeedLimReqDep
+from app.api.deps.services import (
     DbSessionDep,
-    LoginRequired,
-    RequireRoles,
-    SpeedLimReqDep,
     UserServiceDep,
 )
 from app.exceptions import APIException, ValidationException

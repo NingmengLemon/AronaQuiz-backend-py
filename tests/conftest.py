@@ -8,7 +8,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api import deps
+from app.api.deps import checkers as checkers_deps
+from app.api.deps import db as db_deps
 from app.config import get_settings
 from app.main import app
 from app.models.db.base import arona_metadata
@@ -61,8 +62,8 @@ async def test_client(test_engine: AsyncEngine) -> AsyncGenerator[AsyncClient, N
             yield session
             await session.commit()
 
-    deps.speedlimiter = None
-    app.dependency_overrides[deps.get_session_dependency] = get_test_session_override
+    checkers_deps.speedlimiter = None
+    app.dependency_overrides[db_deps.get_session_dependency] = get_test_session_override
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"

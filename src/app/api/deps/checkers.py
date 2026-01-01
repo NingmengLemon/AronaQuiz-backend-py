@@ -1,4 +1,3 @@
-from collections.abc import AsyncGenerator, Callable
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -9,7 +8,6 @@ from limits import parse as parse_limit
 from limits.aio.storage import MemoryStorage
 from limits.aio.strategies import RateLimiter, SlidingWindowCounterRateLimiter
 from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions import (
     APIException,
@@ -25,32 +23,14 @@ from app.models.db.user import (
     UserRole,
 )
 from app.models.dto.code import BusinessCode
-from app.repos.auth import AuthRepository
-from app.repos.problem import ProblemRepository, ProblemSetRepository
-from app.repos.tag import TagRepository
-from app.repos.user import UserRepository
-from app.services.auth import AuthService
-from app.services.problem import ProblemService
-from app.services.tag import TagService
-from app.services.user import UserService
 from app.utils.speedlimit import get_ipaddr, get_remote_address
 
+from .db import DbSessionDep
+from .services import AuthServiceDep
+
 # global vars for injection
-session_getter: Callable[[], AsyncSession] | None = None
 speedlimiter: RateLimiter | None = SlidingWindowCounterRateLimiter(MemoryStorage())
 speedlimit_descriptor: RateLimitItem = parse_limit("6/minute")
-
-
-async def get_session_dependency() -> AsyncGenerator[AsyncSession, None]:
-    if session_getter is None:
-        raise RuntimeError("inject session_getter first")
-    async with session_getter() as session:
-        # async with session.begin():
-        yield session
-        await session.commit()
-
-
-DbSessionDep = Annotated[AsyncSession, Depends(get_session_dependency)]
 
 
 async def _speedlimit_entrance(request: Request) -> Request:
@@ -70,21 +50,6 @@ async def _speedlimit_entrance(request: Request) -> Request:
 
 
 SpeedLimReqDep = Depends(_speedlimit_entrance)
-
-
-def get_auth_service(session: DbSessionDep) -> AuthService:
-    """获取认证服务实例"""
-    return AuthService(
-        session=session,
-        auth_repo=AuthRepository(),
-        user_repo=UserRepository(),
-    )
-
-
-AuthServiceDep = Annotated[
-    AuthService,
-    Depends(get_auth_service),
-]
 
 
 async def _check_login(
@@ -136,52 +101,3 @@ def RequireRoles(*roles: UserRole) -> Any:
         return role
 
     return Depends(check_role)
-
-
-def get_problem_service(session: DbSessionDep) -> ProblemService:
-    """获取题目服务实例"""
-    problemset_repo = ProblemSetRepository()
-    problem_repo = ProblemRepository()
-    tag_repo = TagRepository()
-    return ProblemService(
-        session=session,
-        problemset_repo=problemset_repo,
-        problem_repo=problem_repo,
-        tag_repo=tag_repo,
-    )
-
-
-ProblemServiceDep = Annotated[
-    ProblemService,
-    Depends(get_problem_service),
-]
-
-
-def get_tag_service(session: DbSessionDep) -> TagService:
-    """获取标签服务实例"""
-    tag_repo = TagRepository()
-    return TagService(
-        session=session,
-        tag_repo=tag_repo,
-    )
-
-
-TagServiceDep = Annotated[
-    TagService,
-    Depends(get_tag_service),
-]
-
-
-def get_user_service(session: DbSessionDep) -> UserService:
-    """获取用户服务实例"""
-    user_repo = UserRepository()
-    return UserService(
-        session=session,
-        user_repo=user_repo,
-    )
-
-
-UserServiceDep = Annotated[
-    UserService,
-    Depends(get_user_service),
-]

@@ -5,7 +5,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Query
 
-from app.api.deps import LoginRequired, RequireRoles, TagServiceDep
+from app.api.deps.checkers import LoginRequired, RequireRoles
+from app.api.deps.services import TagServiceDep
 from app.exceptions import APIException
 from app.models.db.user import UserRole
 from app.models.dto.code import BusinessCode

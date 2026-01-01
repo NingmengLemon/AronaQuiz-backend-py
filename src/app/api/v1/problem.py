@@ -3,7 +3,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Query
 
-from app.api.deps import LoginRequired, ProblemServiceDep, RequireRoles
+from app.api.deps.checkers import LoginRequired, RequireRoles
+from app.api.deps.services import ProblemServiceDep
 from app.exceptions import APIException
 from app.models.db.user import UserRole
 from app.models.dto.code import BusinessCode

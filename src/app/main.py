@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import deps
 from app.api import router as api_router
+from app.api.deps import db as db_deps
 from app.config import get_settings
 from app.middlewares.exception_handler import register_exception_handlers
 from app.utils.db import new_engine, new_session_getter
@@ -15,7 +15,7 @@ from app.utils.db import new_engine, new_session_getter
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     engine = new_engine(get_settings().database_url.get_secret_value())
     session_getter = new_session_getter(engine)
-    deps.session_getter = session_getter
+    db_deps.session_getter = session_getter
     yield
     await engine.dispose()
 

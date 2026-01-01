@@ -2,7 +2,8 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Header
 
-from app.api.deps import AuthServiceDep, LoginRequired, SpeedLimReqDep
+from app.api.deps.checkers import LoginRequired, SpeedLimReqDep
+from app.api.deps.services import AuthServiceDep
 from app.exceptions import APIException
 from app.models.dto.code import BusinessCode
 from app.models.dto.request import (
