@@ -10,13 +10,13 @@ from .request import (
     UserRegisterSubmit,
 )
 from .response import (
-    ApiResponse,
     LoginSuccessResponse,
     ProblemResponse,
     ProblemSetCreateResponse,
     ProblemSetResponse,
     RefreshTokenResponse,
     SelfInfoResponse,
+    UnifiedResponse,
     UserCreateResponse,
     UserInfoResponse,
 )
@@ -24,7 +24,7 @@ from .response import (
 __all__ = [
     "BaseUser",
     "BusinessCode",
-    "ApiResponse",
+    "UnifiedResponse",
     "LoginSuccessResponse",
     "ProblemResponse",
     "ProblemSetCreateResponse",

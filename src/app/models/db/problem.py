@@ -65,7 +65,7 @@ class DBProblem(BaseHasId, AsyncAttrs[_ProblemAsyncAttrs], table=True):
 
     problemset_id: UUID = Field(
         sa_column=Column(Uuid, ForeignKey("problemset.id", ondelete="CASCADE"))
-    )  
+    )
     problemset: "DBProblemSet" = Relationship(back_populates="problems")
     tags: list["DBTag"] = Relationship(
         back_populates="problems", link_model=ProblemTagLink

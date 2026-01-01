@@ -12,12 +12,12 @@ from app.models.dto.request import (
     ProblemSubmit,
 )
 from app.models.dto.response import (
-    ApiResponse,
     ProblemResponse,
     ProblemSetCreateResponse,
     ProblemSetResponse,
+    UnifiedResponse,
 )
-from app.utils.response import ResponseUtil
+from app.utils.response import ResponseBuilder
 
 router = APIRouter(tags=["problems"])
 logger = logging.getLogger("uvicorn.error")
@@ -32,7 +32,7 @@ async def create_problem_set(
     current_user: LoginRequired,
     problem_service: ProblemServiceDep,
     problem_set: ProblemSetSubmit = Body(),
-) -> ApiResponse[ProblemSetCreateResponse]:
+) -> UnifiedResponse[ProblemSetCreateResponse]:
     """创建新的题目集"""
     id_, status = await problem_service.create_problemset(
         owner_id=current_user.user_id,
@@ -51,7 +51,7 @@ async def create_problem_set(
             data=ProblemSetCreateResponse(id=id_, status=status),
         )
 
-    return ResponseUtil.created(
+    return ResponseBuilder.created(
         data=ProblemSetCreateResponse(id=id_, status=status), message="题目集创建成功"
     )
 
@@ -67,14 +67,14 @@ async def search_problem_sets(
     keyword: str = Query("", description="搜索关键词，留空则不进行关键词筛选"),
     page: int = Query(1, ge=1, description="页码，从1开始"),
     page_size: int = Query(20, ge=1, le=10000, description="每页数量"),
-) -> ApiResponse[list[ProblemSetResponse]]:
+) -> UnifiedResponse[list[ProblemSetResponse]]:
     """搜索题目集"""
     problem_sets = await problem_service.search_problemsets(
         keyword.strip() or None,
         page=max(page, 1),
         page_size=max(page_size, 1),
     )
-    return ResponseUtil.success(data=problem_sets)
+    return ResponseBuilder.success(data=problem_sets)
 
 
 @router.get(
@@ -86,10 +86,10 @@ async def get_problemset_count(
     problem_service: ProblemServiceDep,
     current_user: LoginRequired,
     keyword: str = Query("", description="搜索关键词，留空则统计所有题目集"),
-) -> ApiResponse[int]:
+) -> UnifiedResponse[int]:
     """获取题目集数量"""
     count = await problem_service.get_problemset_count(keyword.strip() or None)
-    return ResponseUtil.success(data=count)
+    return ResponseBuilder.success(data=count)
 
 
 @router.post(
@@ -102,7 +102,7 @@ async def create_problems(
     problems: list[ProblemSubmit] = Body(),
     problemset_id: UUID = Body(),
     _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
-) -> ApiResponse[list[UUID]]:
+) -> UnifiedResponse[list[UUID]]:
     """添加题目到指定题目集"""
     result = await problem_service.add_problems(
         problemset_id,
@@ -114,7 +114,9 @@ async def create_problems(
             code=BusinessCode.PROBLEMSET_NOT_FOUND,
             message=f"题目集 {problemset_id} 不存在",
         )
-    return ResponseUtil.created(data=result, message=f"成功添加 {len(result)} 道题目")
+    return ResponseBuilder.created(
+        data=result, message=f"成功添加 {len(result)} 道题目"
+    )
 
 
 @router.get(
@@ -131,7 +133,7 @@ async def search_problems(
     ),
     page: int = Query(1, ge=1, description="页码，从1开始"),
     page_size: int = Query(20, ge=1, le=10000, description="每页数量"),
-) -> ApiResponse[list[ProblemResponse]]:
+) -> UnifiedResponse[list[ProblemResponse]]:
     """搜索题目"""
     problems = await problem_service.search_problems(
         keyword.strip() or None,
@@ -139,7 +141,7 @@ async def search_problems(
         page=max(page, 1),
         page_size=max(page_size, 1),
     )
-    return ResponseUtil.success(data=problems)
+    return ResponseBuilder.success(data=problems)
 
 
 @router.get(
@@ -151,10 +153,10 @@ async def get_problem_count(
     problem_service: ProblemServiceDep,
     current_user: LoginRequired,
     problemset_id: UUID | None = Query(None, description="题目集ID"),
-) -> ApiResponse[int]:
+) -> UnifiedResponse[int]:
     """获取题目数量"""
     count = await problem_service.get_problem_count(problemset_id)
-    return ResponseUtil.success(data=count)
+    return ResponseBuilder.success(data=count)
 
 
 @router.get(
@@ -166,10 +168,10 @@ async def get_random_problems(
     current_user: LoginRequired,
     problemset_id: UUID = Query(description="题目集ID"),
     n: int = Query(20, ge=1, le=1000, description="抽取数量"),
-) -> ApiResponse[list[ProblemResponse]]:
+) -> UnifiedResponse[list[ProblemResponse]]:
     """随机抽取题目"""
     problems = await problem_service.sample_problems(problemset_id=problemset_id, n=n)
-    return ResponseUtil.success(data=problems)
+    return ResponseBuilder.success(data=problems)
 
 
 @router.delete(

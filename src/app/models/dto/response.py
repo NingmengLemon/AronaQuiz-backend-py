@@ -12,7 +12,7 @@ from .code import BusinessCode
 T = TypeVar("T")
 
 
-class ApiResponse(BaseModel, Generic[T]):
+class UnifiedResponse(BaseModel, Generic[T]):
     """统一的API响应格式"""
 
     code: int = Field(description="状态码")
@@ -21,32 +21,36 @@ class ApiResponse(BaseModel, Generic[T]):
     success: bool = Field(description="是否成功")
 
     @classmethod
-    def ok(cls, data: T | None = None, message: str = "success") -> "ApiResponse[T]":
+    def ok(
+        cls, data: T | None = None, message: str = "success"
+    ) -> "UnifiedResponse[T]":
         """创建成功响应"""
         return cls(code=BusinessCode.SUCCESS, message=message, data=data, success=True)
 
     @classmethod
-    def error(cls, code: int, message: str, data: T | None = None) -> "ApiResponse[T]":
+    def error(
+        cls, code: int, message: str, data: T | None = None
+    ) -> "UnifiedResponse[T]":
         """创建错误响应"""
         return cls(code=code, message=message, data=data, success=False)
 
     @classmethod
-    def not_found(cls, message: str = "资源未找到") -> "ApiResponse[Any]":
+    def not_found(cls, message: str = "资源未找到") -> "UnifiedResponse[Any]":
         """创建404响应"""
         return cls.error(BusinessCode.NOT_FOUND, message)
 
     @classmethod
-    def bad_request(cls, message: str = "请求参数错误") -> "ApiResponse[Any]":
+    def bad_request(cls, message: str = "请求参数错误") -> "UnifiedResponse[Any]":
         """创建400响应"""
         return cls.error(BusinessCode.BAD_REQUEST, message)
 
     @classmethod
-    def unauthorized(cls, message: str = "未授权") -> "ApiResponse[Any]":
+    def unauthorized(cls, message: str = "未授权") -> "UnifiedResponse[Any]":
         """创建401响应"""
         return cls.error(BusinessCode.UNAUTHORIZED, message)
 
     @classmethod
-    def forbidden(cls, message: str = "权限不足") -> "ApiResponse[Any]":
+    def forbidden(cls, message: str = "权限不足") -> "UnifiedResponse[Any]":
         """创建403响应"""
         return cls.error(BusinessCode.FORBIDDEN, message)
 

@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.exceptions import APIException
 from app.models.dto.code import BusinessCode
-from app.models.dto.response import ApiResponse
+from app.models.dto.response import UnifiedResponse
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         logger.error(f"API异常: {exc.detail}, 路径: {request.url.path}")
         return JSONResponse(
             status_code=exc.status_code,
-            content=ApiResponse.error(
+            content=UnifiedResponse.error(
                 code=exc.code, message=str(exc.detail), data=exc.data
             ).model_dump(mode="json"),
         )
@@ -38,7 +38,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         logger.error(f"验证异常: {exc.errors()}, 路径: {request.url.path}")
         return JSONResponse(
             status_code=422,
-            content=ApiResponse.error(
+            content=UnifiedResponse.error(
                 code=BusinessCode.VALIDATION_ERROR,
                 message="数据验证失败",
                 data=exc.errors(),
@@ -53,7 +53,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         logger.error(f"数据库异常: {str(exc)}, 路径: {request.url.path}")
         return JSONResponse(
             status_code=500,
-            content=ApiResponse.error(
+            content=UnifiedResponse.error(
                 code=BusinessCode.DATABASE_ERROR, message="数据库操作失败"
             ).model_dump(mode="json"),
         )
@@ -71,7 +71,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         if isinstance(exc, APIException):
             return JSONResponse(
                 status_code=exc.status_code,
-                content=ApiResponse.error(
+                content=UnifiedResponse.error(
                     code=exc.code, message=str(exc.detail), data=exc.data
                 ).model_dump(mode="json"),
             )
@@ -110,9 +110,9 @@ def register_exception_handlers(app: FastAPI) -> None:
 
         return JSONResponse(
             status_code=exc.status_code,
-            content=ApiResponse.error(code=code, message=message, data=data).model_dump(
-                mode="json"
-            ),  # 使用mode='json'确保UUID等类型被正确序列化
+            content=UnifiedResponse.error(
+                code=code, message=message, data=data
+            ).model_dump(mode="json"),  # 使用mode='json'确保UUID等类型被正确序列化
         )
 
     @app.exception_handler(Exception)
@@ -123,7 +123,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         logger.error(f"未捕获异常: {str(exc)}, 路径: {request.url.path}", exc_info=True)
         return JSONResponse(
             status_code=500,
-            content=ApiResponse.error(
+            content=UnifiedResponse.error(
                 code=BusinessCode.INTERNAL_ERROR, message="服务器内部错误"
             ).model_dump(mode="json"),
         )

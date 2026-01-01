@@ -15,12 +15,12 @@ from app.models.db.user import UserRole
 from app.models.dto.code import BusinessCode
 from app.models.dto.request import UserRegisterSubmit
 from app.models.dto.response import (
-    ApiResponse,
     SelfInfoResponse,
+    UnifiedResponse,
     UserCreateResponse,
     UserInfoResponse,
 )
-from app.utils.response import ResponseUtil
+from app.utils.response import ResponseBuilder
 
 router = APIRouter(tags=["users"])
 
@@ -34,10 +34,10 @@ async def check_userinfo_availability(
     user_service: UserServiceDep,
     field: str = Query(description="字段名"),
     value: str = Query(description="要检查的值"),
-) -> ApiResponse[Literal["ok", "conflict", "invalid"]]:
+) -> UnifiedResponse[Literal["ok", "conflict", "invalid"]]:
     """检查用户信息可用性"""
     status = await user_service.check_userinfo_availability(field, value)
-    return ResponseUtil.success(data=status)
+    return ResponseBuilder.success(data=status)
 
 
 @router.post(
@@ -49,7 +49,7 @@ async def create_user(
     user_service: UserServiceDep,
     submit: UserRegisterSubmit = Body(),
     _: Any = SpeedLimReqDep,
-) -> ApiResponse[UserCreateResponse]:
+) -> UnifiedResponse[UserCreateResponse]:
     """用户注册"""
     # 检查所有字段的可用性
     availability = await user_service.check_multiple_userinfo_availability(
@@ -116,7 +116,7 @@ async def create_user(
         nickname=submit.nickname,
         role=UserRole.USER,
     )
-    return ResponseUtil.created(
+    return ResponseBuilder.created(
         data=UserCreateResponse.model_validate(user, from_attributes=True),
         message="用户注册成功",
     )
@@ -129,14 +129,14 @@ async def create_user(
 async def get_current_user(
     login_session: LoginRequired,
     user_service: UserServiceDep,
-) -> ApiResponse[SelfInfoResponse]:
+) -> UnifiedResponse[SelfInfoResponse]:
     """获取当前用户信息"""
     user = await user_service.query_user(user_id=login_session.user_id)
     if user is None:
         raise APIException(
             status_code=404, code=BusinessCode.USER_NOT_FOUND, message="用户不存在"
         )
-    return ResponseUtil.success(
+    return ResponseBuilder.success(
         data=SelfInfoResponse.model_validate(user, from_attributes=True)
     )
 
@@ -149,14 +149,14 @@ async def get_user_by_id(
     _: LoginRequired,
     user_service: UserServiceDep,
     user_id: UUID,
-) -> ApiResponse[UserInfoResponse]:
+) -> UnifiedResponse[UserInfoResponse]:
     """获取指定用户信息"""
     user = await user_service.query_user(user_id=user_id)
     if user is None:
         raise APIException(
             status_code=404, code=BusinessCode.USER_NOT_FOUND, message="用户不存在"
         )
-    return ResponseUtil.success(
+    return ResponseBuilder.success(
         data=UserInfoResponse.model_validate(user, from_attributes=True)
     )
 
@@ -170,6 +170,6 @@ async def delete_user(
     db: DbSessionDep,
     user_id: UUID,
     _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
-) -> ApiResponse[str]:
+) -> UnifiedResponse[str]:
     """删除用户"""
     raise NotImplementedError

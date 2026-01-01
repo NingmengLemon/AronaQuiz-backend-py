@@ -11,7 +11,6 @@ from app.models.db.user import UserRole
 from app.models.dto.code import BusinessCode
 from app.models.dto.request import TagCreateRequest, TagUpdateRequest
 from app.models.dto.response import (
-    ApiResponse,
     TagCreateResponse,
     TagDetailResponse,
     TagListResponse,
@@ -21,9 +20,10 @@ from app.models.dto.response import (
     TagProblemsResponse,
     TagResponse,
     TagUpdateResponse,
+    UnifiedResponse,
 )
 from app.services.problem import TAG_NAME_CONSTRAINT_REGEX
-from app.utils.response import ResponseUtil
+from app.utils.response import ResponseBuilder
 
 router = APIRouter(tags=["tags"])
 logger = logging.getLogger("uvicorn.error")
@@ -40,7 +40,7 @@ async def list_tags(
     keyword: str = Query("", description="搜索关键词，留空则返回所有标签"),
     page: int = Query(1, ge=1, description="页码，从1开始"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
-) -> ApiResponse[TagListResponse]:
+) -> UnifiedResponse[TagListResponse]:
     """获取标签列表"""
     tags = await tag_service.list_tags(
         keyword=keyword.strip() or None,
@@ -52,7 +52,7 @@ async def list_tags(
 
     tag_responses = [TagResponse(id=tag.id, name=tag.name) for tag in tags]
 
-    return ResponseUtil.success(
+    return ResponseBuilder.success(
         data=TagListResponse(
             tags=tag_responses,
             total=total,
@@ -70,7 +70,7 @@ async def get_tag(
     tag_service: TagServiceDep,
     current_user: LoginRequired,
     tag_id: UUID,
-) -> ApiResponse[TagDetailResponse]:
+) -> UnifiedResponse[TagDetailResponse]:
     """根据ID获取标签详情"""
     tag = await tag_service.get_tag_by_id(tag_id)
     if not tag:
@@ -84,7 +84,7 @@ async def get_tag(
     problems = await tag_service.get_tag_problems(tag_id)
     problemsets = await tag_service.get_tag_problemsets(tag_id)
 
-    return ResponseUtil.success(
+    return ResponseBuilder.success(
         data=TagDetailResponse(
             id=tag.id,
             name=tag.name,
@@ -103,7 +103,7 @@ async def create_tag(
     tag_service: TagServiceDep,
     tag_data: TagCreateRequest = Body(),
     _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
-) -> ApiResponse[TagCreateResponse]:
+) -> UnifiedResponse[TagCreateResponse]:
     """创建新标签（需要管理员权限）"""
     # 验证标签名称格式（使用与ProblemService相同的正则表达式）
 
@@ -116,7 +116,7 @@ async def create_tag(
 
     tag = await tag_service.create_tag(tag_data.name)
 
-    return ResponseUtil.created(
+    return ResponseBuilder.created(
         data=TagCreateResponse(
             id=tag.id,
             name=tag.name,
@@ -135,7 +135,7 @@ async def update_tag(
     tag_id: UUID,
     tag_data: TagUpdateRequest = Body(),
     _: UserRole = RequireRoles(UserRole.ADMIN, UserRole.SU),
-) -> ApiResponse[TagUpdateResponse]:
+) -> UnifiedResponse[TagUpdateResponse]:
     """更新标签名称（需要管理员权限）"""
     # 验证标签名称格式
     import re
@@ -167,7 +167,7 @@ async def update_tag(
             message=f"标签 {tag_id} 不存在",
         )
 
-    return ResponseUtil.success(
+    return ResponseBuilder.success(
         data=TagUpdateResponse(
             id=updated_tag.id,
             old_name=original_name,  # 使用保存的原始名称
@@ -206,7 +206,7 @@ async def get_tag_problems(
     tag_service: TagServiceDep,
     current_user: LoginRequired,
     tag_id: UUID,
-) -> ApiResponse[TagProblemsResponse]:
+) -> UnifiedResponse[TagProblemsResponse]:
     """获取使用该标签的所有题目"""
     tag = await tag_service.get_tag_by_id(tag_id)
     if not tag:
@@ -229,7 +229,7 @@ async def get_tag_problems(
         for problem in problems
     ]
 
-    return ResponseUtil.success(
+    return ResponseBuilder.success(
         data=TagProblemsResponse(
             tag=TagResponse(id=tag.id, name=tag.name),
             problems=problem_responses,
@@ -246,7 +246,7 @@ async def get_tag_problemsets(
     tag_service: TagServiceDep,
     current_user: LoginRequired,
     tag_id: UUID,
-) -> ApiResponse[TagProblemSetsResponse]:
+) -> UnifiedResponse[TagProblemSetsResponse]:
     """获取使用该标签的所有题目集"""
     tag = await tag_service.get_tag_by_id(tag_id)
     if not tag:
@@ -270,7 +270,7 @@ async def get_tag_problemsets(
         for problemset in problemsets
     ]
 
-    return ResponseUtil.success(
+    return ResponseBuilder.success(
         data=TagProblemSetsResponse(
             tag=TagResponse(id=tag.id, name=tag.name),
             problemsets=problemset_responses,

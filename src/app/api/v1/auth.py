@@ -12,11 +12,11 @@ from app.models.dto.request import (
     RefreshTokenSubmit,
 )
 from app.models.dto.response import (
-    ApiResponse,
     LoginSuccessResponse,
     RefreshTokenResponse,
+    UnifiedResponse,
 )
-from app.utils.response import ResponseUtil
+from app.utils.response import ResponseBuilder
 
 router = APIRouter(tags=["auth"])
 
@@ -31,10 +31,10 @@ async def login(
     submit: LoginByUsernameSubmit | LoginByEmailSubmit | LoginByUserIdSubmit = Body(),
     authorization: str = Header(""),
     _: Any = SpeedLimReqDep,
-) -> ApiResponse[LoginSuccessResponse]:
+) -> UnifiedResponse[LoginSuccessResponse]:
     """用户登录"""
     if authorization:
-        return ResponseUtil.unauthorized(message="需要先退出登录")
+        return ResponseBuilder.unauthorized(message="需要先退出登录")
 
     params: dict[str, Any] = {"password": submit.password}
     if isinstance(submit, LoginByEmailSubmit):
@@ -51,7 +51,7 @@ async def login(
         )
 
     access_token, refresh_token = result
-    return ResponseUtil.success(
+    return ResponseBuilder.success(
         data=LoginSuccessResponse(
             access_token=access_token, refresh_token=refresh_token
         ),
@@ -68,12 +68,12 @@ async def logout(
     login_session: LoginRequired,
     auth_service: AuthServiceDep,
     _: Any = SpeedLimReqDep,
-) -> ApiResponse[str]:
+) -> UnifiedResponse[str]:
     """用户登出"""
     if await auth_service.logout(access_token=login_session.access_token):
-        return ResponseUtil.success(data="ok", message="登出成功")
+        return ResponseBuilder.success(data="ok", message="登出成功")
 
-    return ResponseUtil.bad_request(message="登出失败")
+    return ResponseBuilder.bad_request(message="登出失败")
 
 
 @router.post(
@@ -86,7 +86,7 @@ async def refresh_token(
     auth_service: AuthServiceDep,
     _: Any = SpeedLimReqDep,
     submit: RefreshTokenSubmit = Body(),
-) -> ApiResponse[RefreshTokenResponse]:
+) -> UnifiedResponse[RefreshTokenResponse]:
     """刷新访问令牌"""
     result = await auth_service.refresh_access_token(
         access_token=login_session.access_token,
@@ -101,7 +101,7 @@ async def refresh_token(
         )
 
     new_access_token, new_refresh_token = result
-    return ResponseUtil.success(
+    return ResponseBuilder.success(
         data=RefreshTokenResponse(
             access_token=new_access_token, refresh_token=new_refresh_token
         ),
