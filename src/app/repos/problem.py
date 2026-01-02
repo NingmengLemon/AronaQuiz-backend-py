@@ -115,7 +115,7 @@ class ProblemRepository(BaseRepository[DBProblem]):
     async def search(
         self,
         session: AsyncSession,
-        kw: str | None = None,
+        kws: list[str] | None = None,
         problemset_id: UUID | None = None,
         problem_type: ProblemType | None = None,
         page: int = 1,
@@ -131,17 +131,18 @@ class ProblemRepository(BaseRepository[DBProblem]):
             stmt = stmt.where(DBProblem.type == problem_type)
 
         # 关键词搜索
-        if kw and kw.strip():
-            kw = kw.strip()
-            if problem_type == ProblemType.SELECTIVE:
-                stmt = stmt.where(
-                    or_(
-                        col(DBProblem.content).icontains(kw),
-                        cast(col(DBProblem.details), Text).icontains(kw),
+        if kws:
+            for kw in kws:
+                kw = kw.strip()
+                if problem_type == ProblemType.SELECTIVE:
+                    stmt = stmt.where(
+                        or_(
+                            col(DBProblem.content).icontains(kw),
+                            cast(col(DBProblem.details), Text).icontains(kw),
+                        )
                     )
-                )
-            else:
-                stmt = stmt.where(col(DBProblem.content).icontains(kw))
+                else:
+                    stmt = stmt.where(col(DBProblem.content).icontains(kw))
 
         # 分页
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)

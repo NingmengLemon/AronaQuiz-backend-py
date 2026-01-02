@@ -137,7 +137,7 @@ async def search_problems(
 ) -> UnifiedResponse[list[ProblemResponse]]:
     """搜索题目"""
     problems = await problem_service.search_problems(
-        keyword.strip() or None,
+        kws=keyword.strip().split() if keyword.strip() else None,
         problemset_id=problemset_id,
         page=max(page, 1),
         page_size=max(page_size, 1),

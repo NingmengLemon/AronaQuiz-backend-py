@@ -116,7 +116,7 @@ class ProblemService:
 
     async def search_problems(
         self,
-        kw: str | None = None,
+        kws: list[str] | None = None,
         problemset_id: UUID | None = None,
         problem_type: ProblemType | None = None,
         page: int = 1,
@@ -125,7 +125,7 @@ class ProblemService:
         """搜索题目"""
         problems = await self.problem_repo.search(
             self.session,
-            kw=kw,
+            kws=kws,
             problemset_id=problemset_id,
             problem_type=problem_type,
             page=page,

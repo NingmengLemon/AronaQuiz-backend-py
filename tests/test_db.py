@@ -330,7 +330,7 @@ async def test_search_problem(
         )
         # 搜索包含"Python"的问题
         results = await problem_service.search_problems(
-            kw="Python", problem_type=ProblemType.SELECTIVE
+            kws=["Python"], problem_type=ProblemType.SELECTIVE
         )
         assert len(results) == 2
         assert any("Python是一种编程语言" in p.content for p in results)
@@ -338,16 +338,16 @@ async def test_search_problem(
 
         # 搜索包含"编程语言"的问题
         results = await problem_service.search_problems(
-            kw="编程语言", problem_type=ProblemType.SELECTIVE
+            kws=["编程语言"], problem_type=ProblemType.SELECTIVE
         )
         assert len(results) == 3  # 所有问题都包含"编程语言"
 
         # 测试分页
         results_page1 = await problem_service.search_problems(
-            kw="编程语言", problem_type=ProblemType.SELECTIVE, page=1, page_size=2
+            kws=["编程语言"], problem_type=ProblemType.SELECTIVE, page=1, page_size=2
         )
         results_page2 = await problem_service.search_problems(
-            kw="编程语言", problem_type=ProblemType.SELECTIVE, page=2, page_size=2
+            kws=["编程语言"], problem_type=ProblemType.SELECTIVE, page=2, page_size=2
         )
         assert len(results_page1) == 2
         assert len(results_page2) == 1
@@ -577,15 +577,15 @@ async def test_search_edge_cases(
         problem_repo = ProblemRepository()
 
         # 测试不存在的关键词
-        no_results = await problem_repo.search(session, "不存在的关键词")
+        no_results = await problem_repo.search(session, kws=["不存在的关键词"])
         assert no_results == []
 
         # 测试特殊字符搜索
-        special_char_results = await problem_repo.search(session, "测试")
+        special_char_results = await problem_repo.search(session, kws=["测试"])
         assert len(special_char_results) == 1
 
         # 测试大小写不敏感搜索
-        case_insensitive_results = await problem_repo.search(session, "TEST")
+        case_insensitive_results = await problem_repo.search(session, kws=["TEST"])
         assert len(case_insensitive_results) == 1  # 应该能找到"测试"
 
 
@@ -759,13 +759,13 @@ async def test_advanced_search_operations(
         await session.commit()
 
         # 测试精确匹配搜索
-        python_results = await problem_service.search_problems(kw="Python")
+        python_results = await problem_service.search_problems(kws=["Python"])
         assert (
             len(python_results) == 1
         )  # Python编程基础知识 + Python选项, 但是去重后只剩一个
 
         # 测试模糊匹配搜索
-        programming_results = await problem_service.search_problems(kw="编程")
+        programming_results = await problem_service.search_problems(kws=["编程"])
         assert len(programming_results) >= 2
 
         # 测试按问题集ID搜索
@@ -776,7 +776,7 @@ async def test_advanced_search_operations(
 
         # 测试组合搜索（关键词 + 问题集ID）
         combined_results = await problem_service.search_problems(
-            kw="数据", problemset_id=init_problemset_uuid
+            kws=["数据"], problemset_id=init_problemset_uuid
         )
         assert len(combined_results) >= 1
 
@@ -875,7 +875,7 @@ async def test_data_validation_and_constraints(
             )
             await session.commit()
             # 如果没有抛出异常，验证是否正确处理空内容
-            problems = await problem_service.search_problems(kw="")
+            problems = await problem_service.search_problems(kws=[])
             assert len(problems) >= 0  # 允许空内容搜索
         except Exception:
             pass  # 预期可能的验证错误
@@ -1256,7 +1256,9 @@ async def test_performance_and_bulk_operations(
 
         # 测试批量搜索性能
         start_time = time.time()
-        search_results = await problem_repo.search(session, "性能测试", page_size=999)
+        search_results = await problem_repo.search(
+            session, kws=["性能测试"], page_size=999
+        )
         search_time = time.time() - start_time
 
         print(f"搜索100个问题耗时: {search_time:.3f}秒")
@@ -1266,7 +1268,7 @@ async def test_performance_and_bulk_operations(
         paginated_results = []
         for page in range(1, 11):  # 10页，每页10个
             page_results = await problem_repo.search(
-                session, "性能测试", page=page, page_size=10
+                session, kws=["性能测试"], page=page, page_size=10
             )
             paginated_results.extend(page_results)
 
@@ -1390,16 +1392,16 @@ async def test_unicode_and_special_characters(
         assert len(result) == 4
 
         # 测试Unicode搜索
-        math_results = await problem_repo.search(session, "数学")
+        math_results = await problem_repo.search(session, kws=["数学"])
         assert len(math_results) >= 1
 
-        emoji_results = await problem_repo.search(session, "🐍")
+        emoji_results = await problem_repo.search(session, kws=["🐍"])
         assert len(emoji_results) >= 1
 
-        chinese_results = await problem_repo.search(session, "北京")
+        chinese_results = await problem_repo.search(session, kws=["北京"])
         assert len(chinese_results) >= 1
 
-        russian_results = await problem_repo.search(session, "Русский")
+        russian_results = await problem_repo.search(session, kws=["Русский"])
         assert len(russian_results) >= 1
 
         # 验证存储和检索的完整性
@@ -1602,7 +1604,7 @@ async def test_complex_query_scenarios(
 
         for keyword, expected_count in test_cases:
             results = await problem_repo.search(
-                session, keyword, problem_type=ProblemType.SELECTIVE
+                session, kws=[keyword], problem_type=ProblemType.SELECTIVE
             )
             assert len(results) == expected_count, (
                 f"搜索'{keyword}'应该返回{expected_count}个结果，实际返回{len(results)}个"
@@ -1610,13 +1612,13 @@ async def test_complex_query_scenarios(
 
         # 测试组合搜索
         python_in_problemset = await problem_repo.search(
-            session, "Python", problemset_id=init_problemset_uuid
+            session, kws=["Python"], problemset_id=init_problemset_uuid
         )
         assert len(python_in_problemset) == 2
 
         # 测试分页边界情况
         all_results = await problem_repo.search(
-            session, None, problemset_id=init_problemset_uuid
+            session, kws=None, problemset_id=init_problemset_uuid
         )
         total_count = len(all_results)
 
@@ -1722,7 +1724,7 @@ async def test_data_consistency_after_operations(
         # 搜索验证
         search_results = await problem_repo.search(
             session,
-            kw="一致性测试",
+            kws=["一致性测试"],
             problemset_id=init_problemset_uuid,
             page=1,
             page_size=10,
