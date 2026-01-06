@@ -311,7 +311,7 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "Python是一种什么类型的语言？",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "single",
                     "options": [
@@ -323,7 +323,7 @@ class TestProblemAPIs:
             },
             {
                 "content": "以下哪些是Python的数据类型？",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "multiple",
                     "options": [
@@ -362,7 +362,7 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "测试问题",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "single",
                     "options": [
@@ -398,7 +398,7 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "Python编程语言的特点",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "single",
                     "options": [
@@ -409,7 +409,7 @@ class TestProblemAPIs:
             },
             {
                 "content": "Java是一种编程语言",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "single",
                     "options": [
@@ -491,7 +491,7 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "计数测试题目1",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "single",
                     "options": [
@@ -501,7 +501,7 @@ class TestProblemAPIs:
             },
             {
                 "content": "计数测试题目2",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "single",
                     "options": [
@@ -558,7 +558,7 @@ class TestProblemAPIs:
             problem_data.append(
                 {
                     "content": f"抽样测试题目{i}",
-                    "type": "selective",
+                    "type": "SELECTIVE",
                     "details": {
                         "type": "single",
                         "options": [
@@ -611,7 +611,7 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "待删除题目1",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "single",
                     "options": [
@@ -621,7 +621,7 @@ class TestProblemAPIs:
             },
             {
                 "content": "待删除题目2",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "single",
                     "options": [
@@ -683,7 +683,7 @@ class TestProblemAPIs:
         problem_data = [
             {
                 "content": "权限测试",
-                "type": "selective",
+                "type": "SELECTIVE",
                 "details": {
                     "type": "single",
                     "options": [
