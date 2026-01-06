@@ -2,7 +2,8 @@
 
 from uuid import UUID
 
-from sqlmodel import and_, col, delete, desc, func, or_, select
+from sqlalchemy import Text
+from sqlmodel import and_, cast, col, delete, desc, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.problem import DBProblem, DBProblemSet, ProblemType
@@ -140,7 +141,7 @@ class ProblemRepository(BaseRepository[DBProblem]):
                         filters.append(
                             or_(
                                 col(DBProblem.content).icontains(kw),
-                                col(DBProblem.details).icontains(kw),
+                                cast(DBProblem.details, Text).icontains(kw),
                             )
                         )
                     case _:
