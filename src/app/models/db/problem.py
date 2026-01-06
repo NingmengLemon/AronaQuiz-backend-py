@@ -1,6 +1,6 @@
 from collections.abc import Awaitable
 from datetime import datetime
-from enum import StrEnum, auto
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 from uuid import UUID
 
@@ -25,7 +25,8 @@ if TYPE_CHECKING:
 
 
 class ProblemType(StrEnum):
-    SELECTIVE = auto()
+    # 不要用 auto(), 避免顺序变动导致的问题
+    SELECTIVE = "SELECTIVE"
 
 
 class SelectiveProblemOption(TypedDict):
@@ -35,10 +36,13 @@ class SelectiveProblemOption(TypedDict):
 
 
 class SelectiveProblemDetails(TypedDict):
+    # 类型检查就交给 Pydantic 了
     type: Literal["single", "multiple"]
     options: list[SelectiveProblemOption]
 
 
+# 将来可能会有更多题目类型, 加到这里
+# 还有下面的一个表也别忘了
 type ProblemDetails = SelectiveProblemDetails  # | ...
 
 

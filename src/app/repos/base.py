@@ -14,6 +14,8 @@ ModelT = TypeVar("ModelT", bound=BaseHasId)
 class BaseRepository(Generic[ModelT]):
     """基础仓库类，提供通用的CRUD操作"""
 
+    # repo 不应当 commit 或 rollback 事务, 事务应由 service 层控制
+
     def __init__(self, model_class: type[ModelT]):
         self.model_class = model_class
 
@@ -23,7 +25,7 @@ class BaseRepository(Generic[ModelT]):
             await session.exec(
                 select(self.model_class).where(self.model_class.id == id)
             )
-        ).one_or_none()  # type: ignore
+        ).one_or_none()
 
     async def get_by_field(
         self, session: AsyncSession, field: str, value: Any

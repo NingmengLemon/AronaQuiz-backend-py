@@ -2,8 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import Text, cast
-from sqlmodel import col, delete, desc, func, or_, select
+from sqlmodel import and_, col, delete, desc, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.db.problem import DBProblem, DBProblemSet, ProblemType
@@ -69,6 +68,7 @@ class ProblemSetRepository(BaseRepository[DBProblemSet]):
             .group_by(
                 col(DBProblemSet.id),
                 col(DBProblemSet.name),
+                col(DBProblemSet.description),
                 col(DBProblemSet.created_at),
             )
         )
@@ -132,18 +132,20 @@ class ProblemRepository(BaseRepository[DBProblem]):
 
         # 关键词搜索
         if kws:
+            filters = []
             for kw in kws:
                 kw = kw.strip()
-                if problem_type == ProblemType.SELECTIVE:
-                    stmt = stmt.where(
-                        or_(
-                            col(DBProblem.content).icontains(kw),
-                            cast(col(DBProblem.details), Text).icontains(kw),
+                match problem_type:
+                    case ProblemType.SELECTIVE:
+                        filters.append(
+                            or_(
+                                col(DBProblem.content).icontains(kw),
+                                col(DBProblem.details).icontains(kw),
+                            )
                         )
-                    )
-                else:
-                    stmt = stmt.where(col(DBProblem.content).icontains(kw))
-
+                    case _:
+                        filters.append(col(DBProblem.content).icontains(kw))
+            stmt = stmt.where(and_(*filters))
         # 分页
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
 
